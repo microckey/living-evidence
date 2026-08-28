@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Do Teacher Expectations Raise Students’ IQ? — a living meta-analysis</title>
+<meta name="description" content="A Living Evidence document: a meta-analysis of the Pygmalion effect that you — and your AI agent — can cross-examine, re-run, and extend, right on this page.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>">
+<link rel="stylesheet" href="lib/living-evidence.css">
+<style>
+  html { background: var(--le-paper); }
+  body {
+    margin: 0; padding: 0 1.2rem 4rem; background: var(--le-paper); color: var(--le-ink);
+    font-family: Iowan Old Style, Palatino, Georgia, serif; font-size: 17px; line-height: 1.65;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  header.doc { margin: 3rem 0 1.5rem; }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
+  .subtitle { color: var(--le-muted); font-size: 1.05rem; margin: 0 0 1.2rem; }
+  h2 { font-size: 1.3rem; margin: 2.4rem 0 0.6rem; }
+  h3 { font-size: 1.05rem; margin: 1.6rem 0 0.4rem; }
+  a { color: var(--le-accent); }
+  .format-note, .howto {
+    border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent);
+    background: var(--le-card); border-radius: 10px; padding: 0.9rem 1.1rem; font-size: 0.92em; margin: 1.2rem 0;
+  }
+  .howto { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 620px) { .howto { grid-template-columns: 1fr; } }
+  .howto h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+  .howto p { margin: 0.3rem 0; }
+  .stat-line { font-variant-numeric: tabular-nums; }
+  figure.main { margin: 1.4rem 0; }
+  details { margin: 1rem 0; border: 1px solid var(--le-border); border-radius: 10px; background: var(--le-card); padding: 0.6rem 1rem; }
+  summary { cursor: pointer; font-weight: 650; }
+  table.studies { border-collapse: collapse; font-size: 0.8em; margin: 0.8rem 0; width: 100%; font-variant-numeric: tabular-nums; }
+  table.studies th, table.studies td { text-align: right; padding: 0.25em 0.6em; border-bottom: 1px solid var(--le-border); }
+  table.studies th:first-child, table.studies td:first-child { text-align: left; }
+  .table-scroll { overflow-x: auto; }
+  .workbench-empty { color: var(--le-muted); font-size: 0.92em; font-style: italic; }
+  section.le-has-figures .workbench-empty { display: none; }
+  #pending-section { display: none; }
+  section.le-has-pending#pending-section, #pending-section:has(.le-pending-card) { display: block; }
+  footer { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--le-border); color: var(--le-muted); font-size: 0.85em; }
+  .refs { font-size: 0.85em; color: var(--le-muted); }
+  .refs p { margin: 0.4em 0; padding-left: 1.4em; text-indent: -1.4em; }
+</style>
+</head>
+<body>
+<main>
+  <header class="doc">
+    <h1>Do Teacher Expectations Raise Students’ IQ?</h1>
+    <p class="subtitle">A living meta-analysis of the Pygmalion effect — 19 experiments, recomputed in your browser, open to cross-examination.</p>
+    <div class="le-status" id="le-status"><span class="le-status-dot le-off"></span><span>Initializing agent interface…</span></div>
+  </header>
+
+  <div class="format-note">
+    <strong>This is a Living Evidence document.</strong> The statistics in this article are not typeset into the text —
+    they are computed live, in your browser, from the study-level data embedded in this page. If you are reading
+    with an AI agent in a <a href="https://developer.chrome.com/docs/ai/webmcp">WebMCP</a>-enabled browser, your agent has been
+    handed tools to re-run, stress-test, and extend every analysis here. Whatever it does is rendered back into this
+    document — in the <a href="#workbench">Reader’s Workbench</a> and the <a href="#ledger">audit ledger</a> — so you
+    watch the cross-examination happen on the page itself.
+  </div>
+
+  <div class="howto">
+    <div>
+      <h3>If you are a human</h3>
+      <p>Just read. Highlighted sentences are <em>claims</em> — testable assertions with a deterministic check behind
+      them. Ask your agent to challenge one (“is the publication-bias claim actually solid?”), or drive the same tools
+      yourself from the <a href="#console">Tool console</a>. When an agent proposes changing the evidence base, nothing
+      happens until <em>you</em> approve it.</p>
+    </div>
+    <div>
+      <h3>If you are an agent</h3>
+      <p>Call <code>get_document_overview</code> first. Every number you cite from this document must come from its
+      tools, not from parsing the prose — the page computes, you judge. Test claims with <code>evaluate_claim</code>;
+      verdict badges will appear in the text. You may <code>propose_study</code>, but only the human can approve it.</p>
+    </div>
+  </div>
+
+  <h2>Background: the most famous classroom experiment ever run</h2>
+  <p>In 1968, Rosenthal and Jacobson told elementary-school teachers that a test had identified certain pupils as
+  “intellectual bloomers” about to surge ahead. In reality the bloomers had been picked at random. At the end of the
+  year, the researchers reported, those randomly blessed children had gained more IQ than their classmates. The study —
+  <em>Pygmalion in the Classroom</em> — became one of the most cited results in psychology, and its one-line moral,
+  that <span class="le-claim" data-claim="c-textbook">simply raising a teacher’s expectations makes children measurably
+  smarter</span>, entered textbooks, teacher training, and popular culture.</p>
+
+  <p>What entered the textbooks less often: replications began almost immediately, and most of them failed. By 1984,
+  Raudenbush could assemble nineteen experiments that all used the same design — deceive teachers about randomly chosen
+  pupils, then measure IQ. This document carries all nineteen as data, not citations.</p>
+
+  <h2>The evidence base</h2>
+  <p class="stat-line">Across <strong data-le-bind="k">19</strong> studies, the pooled random-effects estimate of the
+  expectancy effect is <strong data-le-bind="estimate">…</strong> standard deviations,
+  95%&nbsp;CI <strong data-le-bind="ci">…</strong>, <em>p</em>&nbsp;= <strong data-le-bind="p">…</strong>.
+  Between-study heterogeneity is moderate (I²&nbsp;= <span data-le-bind="I2">…</span>,
+  Q&nbsp;= <span data-le-bind="Q">…</span>, <em>p</em>&nbsp;= <span data-le-bind="Q_p">…</span>).</p>
+
+  <figure class="main">
+    <div id="le-main-figure"></div>
+    <figcaption class="refs">Forest plot of the current evidence base. Squares are study estimates sized by weight;
+    the diamond is the pooled random-effects (REML) estimate. This figure re-renders whenever the evidence base
+    changes.</figcaption>
+  </figure>
+
+  <details>
+    <summary>Study-level data (the table your agent reads through <code>get_studies</code>)</summary>
+    <div class="table-scroll">
+      <table class="studies">
+        <thead><tr><th>Study</th><th>Year</th><th>Prior contact (weeks)</th><th>Setting</th><th>Tester</th><th>n₁</th><th>n₂</th><th>SMD</th><th>Var</th></tr></thead>
+        <tbody id="study-table-body"></tbody>
+      </table>
+    </div>
+    <p class="refs">Data transcribed from the open <a href="https://wviechtb.github.io/metadat/reference/dat.raudenbush1985.html">metadat</a>
+    distribution of Raudenbush (1984) / Raudenbush &amp; Bryk (1985). “Prior contact” is how many weeks the teachers had
+    already known their pupils before researchers tried to plant an expectation.</p>
+  </details>
+
+  <h2>What the evidence actually says</h2>
+  <p>Read as one undifferentiated pile, the literature is deflating:
+  <span class="le-claim" data-claim="c-overall">pooled across all studies, the average expectancy effect is small and
+  not statistically significant</span>. If the Pygmalion effect were the robust, general phenomenon of popular
+  telling, this is not the forest plot it would leave behind.</p>
+
+  <p>But the pile is not undifferentiated, and this is where the story turns. The experiments differ in one crucial,
+  almost embarrassing way: <em>how long the teachers had known their pupils before the researchers lied to them</em>.
+  You cannot easily plant a false expectation about a child the teacher has taught for months.
+  <span class="le-claim" data-claim="c-moderator">The length of prior teacher–pupil contact explains essentially all of
+  the between-study differences</span> — and once you look only at the studies where the deception had room to work,
+  the effect reappears: <span class="le-claim" data-claim="c-window">in studies where teachers had known their pupils
+  for at most one week, the expectancy induction produced a significant IQ gain</span>.</p>
+
+  <p>So the honest one-line summary is neither “Pygmalion is real” nor “Pygmalion failed to replicate.” It is:
+  <em>expectations moved measured IQ only in the narrow window before teachers had formed their own.</em> A claim about
+  the power of belief turns out to be a claim about the timing of belief.</p>
+
+  <h2>How solid is this?</h2>
+  <p>Two robustness checks are built into this document. First,
+  <span class="le-claim" data-claim="c-robust">no single study drives these conclusions</span> — remove any one
+  experiment and the overall picture stands. Second,
+  <span class="le-claim" data-claim="c-bias">the evidence base shows no signs of publication bias</span> — though your
+  agent may have opinions about how confidently that can be said. Every claim above carries a deterministic check;
+  none of them has been evaluated yet on your copy of this document. That is deliberate. <strong>Don’t take this
+  article’s word for its own claims — have them tested.</strong></p>
+
+  <h2 id="workbench">Reader’s Workbench</h2>
+  <section>
+    <p class="workbench-empty">Nothing here yet. Analyses run by your agent (or by you, from the Tool console) will
+    render their figures here, newest first — forest plots, sensitivity analyses, funnel plots, meta-regressions.</p>
+    <div id="le-workbench"></div>
+  </section>
+
+  <section id="pending-section">
+    <h2>Proposed changes to the evidence base</h2>
+    <p class="refs">Agents can propose adding studies (for example, experiments published after this document was
+    written). Nothing enters the evidence base without a human pressing Approve.</p>
+    <div id="le-pending"></div>
+  </section>
+
+  <h2 id="ledger">Audit ledger</h2>
+  <p class="refs">Append-only record of everything done to this document in your session — by agents and by humans.
+  Agents can read it back through <code>get_audit_log</code>.</p>
+  <ol class="le-ledger" id="le-ledger"></ol>
+
+  <h2 id="console">Tool console</h2>
+  <details>
+    <summary>Drive the document’s tools by hand (no agent required)</summary>
+    <p class="refs">This is the same tool surface an AI agent sees through WebMCP — same schemas, same effects, same
+    ledger. It exists so that nothing an agent can do to this document is hidden from you.</p>
+    <div id="le-console"></div>
+  </details>
+
+  <h2>Methods note</h2>
+  <p class="refs">Pooling uses a random-effects model with REML estimation of τ² (DerSimonian–Laird and fixed-effect
+  available through the tools); heterogeneity is reported as Cochran’s Q and I²; the moderator model is a mixed-effects
+  meta-regression on prior contact truncated at three weeks, following Raudenbush (1984); publication-bias diagnostics
+  use Egger’s regression test. The engine is dependency-free JavaScript running in this page, validated against
+  R’s <code>metafor</code> package output for this dataset (all reference values reproduced to published precision;
+  see the test suite in the repository). Statistical caveat: subgroup and moderator analyses here are observational
+  comparisons across randomized experiments and can be confounded by other study features.</p>
+
+  <h2>References</h2>
+  <div class="refs">
+    <p>Rosenthal, R., &amp; Jacobson, L. (1968). <em>Pygmalion in the classroom: Teacher expectation and pupils’
+    intellectual development.</em> Holt, Rinehart &amp; Winston.</p>
+    <p>Raudenbush, S. W. (1984). Magnitude of teacher expectancy effects on pupil IQ as a function of the credibility
+    of expectancy induction: A synthesis of findings from 18 experiments. <em>Journal of Educational Psychology,
+    76</em>(1), 85–97.</p>
+    <p>Raudenbush, S. W., &amp; Bryk, A. S. (1985). Empirical Bayes meta-analysis. <em>Journal of Educational
+    Statistics, 10</em>(2), 75–98.</p>
+    <p>Viechtbauer, W. (2010). Conducting meta-analyses in R with the metafor package. <em>Journal of Statistical
+    Software, 36</em>(3), 1–48.</p>
+  </div>
+
+  <footer>
+    <p><strong>Living Evidence v0.1</strong> — a document format for the age of machine readers.
+    Prose for humans, tools for agents, one shared page. Source, format spec, and authoring template:
+    <a href="https://github.com/microckey/living-evidence">github.com/microckey/living-evidence</a> (MIT).
+    Study-level data from the open metadat distribution, © the original authors; this document’s prose and code are
+    original.</p>
+    <p><noscript>This document requires JavaScript: its statistics are computed, not typeset.</noscript></p>
+  </footer>
+</main>
+
+<script type="module">
+  import { initLivingEvidence } from './lib/living-evidence.js';
+  import { DATASET } from './data/raudenbush1985.js';
+
+  // study table (rendered from the same data the tools serve — single source of truth)
+  const tbody = document.getElementById('study-table-body');
+  for (const s of DATASET.studies) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${s.author}</td><td>${s.year}</td><td>${s.weeks}</td><td>${s.setting}</td><td>${s.tester}</td>
+      <td>${s.n1i}</td><td>${s.n2i}</td><td>${s.yi.toFixed(2)}</td><td>${s.vi.toFixed(4)}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  initLivingEvidence({
+    title: 'Do Teacher Expectations Raise Students’ IQ? A living meta-analysis of the Pygmalion effect',
+    hypothesis: 'Experimentally induced teacher expectations raise pupils’ measured IQ.',
+    dataset: DATASET,
+    subgroupFields: {
+      weeks: { type: 'numeric', default_split: 1 },
+      setting: { type: 'categorical' },
+      tester: { type: 'categorical' },
+    },
+    moderators: { weeks: {}, year: {} },
+    claims: [
+      {
+        id: 'c-textbook',
+        rule: 'Supported iff the pooled random-effects (REML) estimate over the full evidence base is positive AND p < 0.05.',
+        check(A) {
+          const fit = A.overall({ method: 'REML' });
+          if (fit.significant && fit.estimate > 0) {
+            return { verdict: 'supported', reason: `pooled SMD ${fit.estimate}, p = ${fit.p} < 0.05`, evidence: fit };
+          }
+          return {
+            verdict: 'challenged',
+            reason: `pooled SMD ${fit.estimate} [${fit.ci_lower}, ${fit.ci_upper}], p = ${fit.p} — the general claim is not supported across the full evidence base`,
+            evidence: fit,
+          };
+        },
+      },
+      {
+        id: 'c-overall',
+        rule: 'Supported iff the pooled REML estimate has p ≥ 0.05 AND |SMD| < 0.2 (small by Cohen’s convention).',
+        check(A) {
+          const fit = A.overall({ method: 'REML' });
+          if (!fit.significant && Math.abs(fit.estimate) < 0.2) {
+            return { verdict: 'supported', reason: `pooled SMD ${fit.estimate} (|SMD| < 0.2), p = ${fit.p} ≥ 0.05`, evidence: fit };
+          }
+          if (fit.significant) return { verdict: 'challenged', reason: `pooled effect IS significant (p = ${fit.p})`, evidence: fit };
+          return { verdict: 'nuanced', reason: `not significant, but |SMD| = ${Math.abs(fit.estimate)} ≥ 0.2`, evidence: fit };
+        },
+      },
+      {
+        id: 'c-moderator',
+        rule: 'Supported iff meta-regression on min(weeks, 3) has negative slope, p < 0.05, AND R² ≥ 90% of heterogeneity explained.',
+        check(A) {
+          const fit = A.metareg({ moderator: 'weeks', cap: 3 });
+          const m = fit.moderator;
+          if (m.b < 0 && m.p < 0.05 && fit.R2_percent >= 90) {
+            return { verdict: 'supported', reason: `slope ${m.b} per week (p = ${m.p}), R² = ${fit.R2_percent}% of between-study heterogeneity explained`, evidence: fit };
+          }
+          if (m.b < 0 && m.p < 0.05) {
+            return { verdict: 'nuanced', reason: `slope significant (${m.b}, p = ${m.p}) but explains only ${fit.R2_percent}% of heterogeneity`, evidence: fit };
+          }
+          return { verdict: 'challenged', reason: `moderator not significant (slope ${m.b}, p = ${m.p})`, evidence: fit };
+        },
+      },
+      {
+        id: 'c-window',
+        rule: 'Supported iff the subgroup with ≤ 1 week of prior contact has a positive pooled estimate with p < 0.05.',
+        check(A) {
+          const fit = A.subgroup({ split_field: 'weeks', split_at: 1 });
+          const low = fit.groups.find((g) => g.group.includes('≤ 1'));
+          if (low && low.estimate > 0 && low.significant) {
+            return { verdict: 'supported', reason: `≤1-week subgroup (k=${low.k}): SMD ${low.estimate} [${low.ci_lower}, ${low.ci_upper}], p = ${low.p}`, evidence: fit };
+          }
+          return { verdict: 'challenged', reason: low ? `≤1-week subgroup not significantly positive (SMD ${low.estimate}, p = ${low.p})` : 'subgroup not found', evidence: fit };
+        },
+      },
+      {
+        id: 'c-robust',
+        rule: 'Supported iff leave-one-out re-fits never flip the significance status of the pooled estimate.',
+        check(A) {
+          const fit = A.loo();
+          if (fit.flips_significance.length === 0) {
+            return { verdict: 'supported', reason: `19 re-fits, estimates ${fit.min_estimate}…${fit.max_estimate}, no significance flips`, evidence: fit };
+          }
+          return { verdict: 'challenged', reason: `omitting ${fit.flips_significance.join(', ')} flips the conclusion`, evidence: fit };
+        },
+      },
+      {
+        id: 'c-bias',
+        rule: 'Supported iff Egger’s test p ≥ 0.10; nuanced if 0.05 ≤ p < 0.10 (borderline asymmetry); challenged if p < 0.05.',
+        check(A) {
+          const fit = A.funnel();
+          if (fit.p >= 0.10) return { verdict: 'supported', reason: `Egger’s test p = ${fit.p} — no indication of small-study asymmetry`, evidence: fit };
+          if (fit.p >= 0.05) {
+            return { verdict: 'nuanced', reason: `Egger’s test p = ${fit.p}: not significant at α = 0.05, but borderline — “no signs of publication bias” overstates the confidence this test supports`, evidence: fit };
+          }
+          return { verdict: 'challenged', reason: `Egger’s test p = ${fit.p} < 0.05 — significant small-study asymmetry`, evidence: fit };
+        },
+      },
+    ],
+  });
+</script>
+</body>
+</html>

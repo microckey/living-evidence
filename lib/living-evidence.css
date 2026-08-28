@@ -1,0 +1,118 @@
+/* living-evidence.css — component styles for the Living Evidence format.
+   Theme tokens: light on bare :root, dark under prefers-color-scheme with
+   data-theme guards so an explicit choice wins in both directions. */
+
+:root {
+  --le-paper: #faf8f4;
+  --le-ink: #23211c;
+  --le-muted: #7c766a;
+  --le-accent: #7a4bd6;
+  --le-accent-soft: #7a4bd61a;
+  --le-good: #1e7d46;
+  --le-bad: #b03434;
+  --le-warn: #a8730a;
+  --le-card: #ffffff;
+  --le-border: #e4dfd4;
+  --le-code: #f0ede5;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --le-paper: #17161a;
+    --le-ink: #e8e5df;
+    --le-muted: #93908a;
+    --le-accent: #a486f0;
+    --le-accent-soft: #a486f024;
+    --le-good: #4fbd7f;
+    --le-bad: #e07a7a;
+    --le-warn: #d9a441;
+    --le-card: #201f24;
+    --le-border: #35333a;
+    --le-code: #26252b;
+  }
+}
+:root[data-theme="dark"] {
+  --le-paper: #17161a;
+  --le-ink: #e8e5df;
+  --le-muted: #93908a;
+  --le-accent: #a486f0;
+  --le-accent-soft: #a486f024;
+  --le-good: #4fbd7f;
+  --le-bad: #e07a7a;
+  --le-warn: #d9a441;
+  --le-card: #201f24;
+  --le-border: #35333a;
+  --le-code: #26252b;
+}
+
+/* status bar */
+.le-status {
+  display: flex; align-items: center; gap: 0.6em;
+  padding: 0.7em 1em; border: 1px solid var(--le-border); border-radius: 10px;
+  background: var(--le-card); font-size: 0.92em; color: var(--le-muted);
+}
+.le-status-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.le-status-dot.le-on { background: var(--le-good); box-shadow: 0 0 6px var(--le-good); }
+.le-status-dot.le-off { background: var(--le-muted); }
+
+/* claims */
+.le-claim {
+  background: var(--le-accent-soft);
+  border-bottom: 2px solid var(--le-accent);
+  padding: 0 0.15em; border-radius: 3px 3px 0 0;
+}
+.le-chip {
+  font-size: 0.62em; font-weight: 700; letter-spacing: 0.02em;
+  padding: 0.15em 0.5em; margin-left: 0.4em; border-radius: 999px;
+  white-space: nowrap; vertical-align: super;
+}
+.le-chip-supported { background: var(--le-good); color: #fff; }
+.le-chip-challenged { background: var(--le-bad); color: #fff; }
+.le-chip-nuanced { background: var(--le-warn); color: #fff; }
+.le-chip-stale { opacity: 0.45; text-decoration: line-through; }
+
+/* figures */
+.le-figure {
+  margin: 1.2em 0; padding: 0.9em 1em 0.6em;
+  border: 1px solid var(--le-border); border-radius: 12px; background: var(--le-card);
+  overflow-x: auto;
+}
+.le-figure figcaption { display: flex; gap: 0.7em; align-items: baseline; flex-wrap: wrap; margin-bottom: 0.5em; font-size: 0.85em; }
+.le-fig-run { font-weight: 700; color: var(--le-accent); font-variant-numeric: tabular-nums; }
+.le-fig-title { font-weight: 650; color: var(--le-ink); }
+.le-fig-caption { color: var(--le-muted); }
+.le-figure-svg { width: 100%; height: auto; display: block; color: var(--le-ink); }
+
+/* ledger */
+.le-ledger { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; border: 1px solid var(--le-border); border-radius: 10px; background: var(--le-card); }
+.le-ledger-row { display: flex; gap: 0.7em; padding: 0.45em 0.8em; border-bottom: 1px solid var(--le-border); font-size: 0.85em; align-items: baseline; }
+.le-ledger-row:last-child { border-bottom: none; }
+.le-run { color: var(--le-accent); font-weight: 700; font-variant-numeric: tabular-nums; flex: none; width: 2.6em; }
+.le-actor { flex: none; font-size: 0.75em; font-weight: 700; letter-spacing: 0.06em; padding: 0.1em 0.45em; border-radius: 4px; background: var(--le-code); color: var(--le-muted); }
+.le-human .le-actor { background: var(--le-good); color: #fff; }
+.le-summary { color: var(--le-ink); }
+
+/* pending proposal cards */
+.le-pending-card { border: 2px dashed var(--le-warn); border-radius: 12px; padding: 1em; margin: 1em 0; background: var(--le-card); }
+.le-pending-head { font-weight: 700; margin-bottom: 0.5em; }
+.le-pending-table { border-collapse: collapse; font-size: 0.88em; width: 100%; }
+.le-pending-table th { text-align: left; color: var(--le-muted); font-weight: 500; padding: 0.15em 0.9em 0.15em 0; white-space: nowrap; vertical-align: top; }
+.le-pending-table td { padding: 0.15em 0; }
+.le-pending-note { font-size: 0.82em; color: var(--le-warn); margin: 0.6em 0; }
+.le-pending-actions { display: flex; gap: 0.6em; }
+
+/* buttons */
+.le-btn {
+  font: inherit; font-size: 0.88em; font-weight: 650;
+  padding: 0.45em 1em; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--le-border); background: var(--le-code); color: var(--le-ink);
+}
+.le-btn:hover { border-color: var(--le-accent); }
+.le-btn-approve { background: var(--le-good); border-color: var(--le-good); color: #fff; }
+.le-btn-reject { background: transparent; color: var(--le-bad); border-color: var(--le-bad); }
+
+/* tool console */
+.le-console-row { display: flex; gap: 0.6em; align-items: center; margin-bottom: 0.5em; }
+.le-console-select { font: inherit; font-size: 0.9em; padding: 0.35em 0.5em; border-radius: 8px; border: 1px solid var(--le-border); background: var(--le-card); color: var(--le-ink); }
+.le-console-desc { font-size: 0.82em; color: var(--le-muted); margin-bottom: 0.5em; }
+.le-console-args { width: 100%; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.82em; border: 1px solid var(--le-border); border-radius: 8px; background: var(--le-card); color: var(--le-ink); padding: 0.6em; box-sizing: border-box; }
+.le-console-out { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.78em; background: var(--le-code); border: 1px solid var(--le-border); border-radius: 8px; padding: 0.8em; overflow-x: auto; max-height: 320px; overflow-y: auto; white-space: pre-wrap; }
