@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Living Evidence — authoring template</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>">
+<link rel="stylesheet" href="lib/living-evidence.css">
+<style>
+  html { background: var(--le-paper); }
+  body { margin: 0; padding: 0 1.2rem 4rem; background: var(--le-paper); color: var(--le-ink);
+         font-family: Georgia, serif; font-size: 17px; line-height: 1.65; }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { margin: 2.5rem 0 0.5rem; }
+  .muted { color: var(--le-muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Your living document title</h1>
+  <p class="muted">Authoring template for the Living Evidence format. Replace the
+  DEMO dataset (synthetic numbers, clearly not real research) with your extracted
+  study table, write your prose, and mark your claims.</p>
+
+  <div class="le-status" id="le-status"></div>
+
+  <h2>Your argument</h2>
+  <p>Write prose as usual. Mark testable sentences as claims:
+  <span class="le-claim" data-claim="c-effect">the demo intervention has a positive
+  pooled effect</span>, and bind live statistics into the text — this document pools
+  <strong data-le-bind="k">…</strong> studies with SMD
+  <strong data-le-bind="estimate">…</strong> (95% CI <span data-le-bind="ci">…</span>,
+  p = <span data-le-bind="p">…</span>).</p>
+
+  <div id="le-main-figure"></div>
+
+  <h2>Reader's Workbench</h2>
+  <div id="le-workbench"></div>
+
+  <section id="pending-section">
+    <h2>Proposed changes</h2>
+    <div id="le-pending"></div>
+  </section>
+
+  <h2>Audit ledger</h2>
+  <ol class="le-ledger" id="le-ledger"></ol>
+
+  <h2>Tool console</h2>
+  <div id="le-console"></div>
+</main>
+
+<script type="module">
+  import { initLivingEvidence } from './lib/living-evidence.js';
+
+  // ⚠ SYNTHETIC DEMO DATA — replace with real extracted study records.
+  const DATASET = {
+    id: 'demo', label: 'Synthetic demo dataset (NOT real research)',
+    effect_measure: 'SMD',
+    fields: { yi: 'standardized mean difference', vi: 'sampling variance', dose: 'demo moderator' },
+    studies: [
+      { id: 'd1', author: 'Demo A', year: 2019, dose: 1, yi: 0.42, vi: 0.030 },
+      { id: 'd2', author: 'Demo B', year: 2020, dose: 2, yi: 0.31, vi: 0.045 },
+      { id: 'd3', author: 'Demo C', year: 2021, dose: 1, yi: 0.18, vi: 0.028 },
+      { id: 'd4', author: 'Demo D', year: 2022, dose: 3, yi: 0.55, vi: 0.060 },
+      { id: 'd5', author: 'Demo E', year: 2023, dose: 2, yi: 0.12, vi: 0.033 },
+    ],
+  };
+
+  initLivingEvidence({
+    title: 'Your living document title',
+    hypothesis: 'State the hypothesis your document examines.',
+    dataset: DATASET,
+    subgroupFields: { dose: { type: 'numeric', default_split: 1 } },
+    moderators: { dose: {}, year: {} },
+    claims: [
+      {
+        id: 'c-effect',
+        rule: 'Supported iff the pooled REML estimate is positive with p < 0.05.',
+        check(A) {
+          const fit = A.overall({ method: 'REML' });
+          if (fit.significant && fit.estimate > 0) {
+            return { verdict: 'supported', reason: `SMD ${fit.estimate}, p = ${fit.p}`, evidence: fit };
+          }
+          return { verdict: 'challenged', reason: `SMD ${fit.estimate}, p = ${fit.p}`, evidence: fit };
+        },
+      },
+    ],
+  });
+</script>
+</body>
+</html>
