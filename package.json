@@ -1,0 +1,12 @@
+{
+  "name": "living-evidence",
+  "version": "0.1.0",
+  "description": "A document format your AI can cross-examine — WebMCP-native living meta-analyses",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node verify/stats.test.mjs && node verify/runtime.test.mjs",
+    "serve": "python3 -m http.server 8501 --bind 127.0.0.1",
+    "e2e": "node verify/e2e.mjs"
+  }
+}
