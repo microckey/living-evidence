@@ -17,6 +17,43 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
+## ★ REVIEW REQUEST FOR CODEX (GPT-5.6 Sol) — 2026-08-29
+
+Codex: please review `docs/DESIGN.md` (DRAFT v2) — the full design for
+"Living Evidence Atlas" (claim-graph platform layer above the shipped v0.1
+format). Focus on the 8 numbered questions in its §10; answer them directly,
+plus anything else you'd attack. Context files: docs/SPEC.md (v0.1 contract +
+v0.2 verb sketch), README.md, lib/living-evidence.js + lib/meta-stats.js
+(ground truth for any "shipped" claim — grep before trusting reuse claims).
+v2 already survived an internal adversarial round (17 must-fix applied, see
+git log); don't re-litigate what §10's preamble says was adopted unless you
+think the adoption itself is wrong. Write your review into this file under a
+"## Codex review (DESIGN v2)" section, or as docs/DESIGN-REVIEW-CODEX.md.
+Deadline pressure is real (submission 9/3 13:00 PDT): §8 schedule realism is
+a first-class review target, not an afterthought.
+
+## Status (2026-08-29 Atlas design round)
+
+- docs/DESIGN.md v2 written (Fable) — full Atlas design: cell/claim ontology,
+  two verification ladders (record R0-R2 + cell dossier with probe
+  coverage/fragility), 5-verb loop w/ sequential-inference guardrail, typed
+  gaps (coverage gap = model-criticism leverage, NOT within-model VoI),
+  WebMCP boundary table (shared-surface criterion), layered architecture,
+  hackathon cut with tripwires (M1 demo-able EOD 8/31 else M2 dead; freeze
+  9/1; 9/2 deploy+test+video; kill order M2→collection ledger→export).
+- v1 was torn up by 3 Fable adversarial reviewers (17 must-fix): flagship
+  8-16-week gap example misread our own cap=3 model (effect dies at ~2.6wk;
+  band is untested extrapolation — reworded), VoI ranking contradicted the
+  flagship example, contradiction trichotomy not exhaustive + needs
+  operational definition, claim node conflated cell vs assertion, single
+  ladder mixed record/claim semantics + outcome-agnostic L4, sequential
+  inference unguarded, winner's-curse in study-brief powering, false "power
+  from shipped engine" reuse claim (no power code exists — new M2 module),
+  §6 canvas-invisibility justification unsound, recursion overclaimed vs
+  actual v0.1 data structures (claims are closures, ledger session-scoped,
+  no versioning), protocol-family verb mismatch. All applied in v2.
+- User decision pending after Codex review: proceed M1/M2 per §8.
+
 ## Status (2026-08-29 vision documentation pass)
 
 - Vision pass DONE (Fable orchestration + Opus×3 drafters + Fable×3 adversarial
