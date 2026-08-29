@@ -17,7 +17,27 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
-## ★ REVIEW REQUEST FOR CODEX (GPT-5.6 Sol) — 2026-08-29
+## Status (2026-08-29 Codex review round — CURRENT)
+
+- Codex review executed via `codex exec` (read-only sandbox) → saved to
+  docs/DESIGN-REVIEW-CODEX.md. Verdict: vision approved, §8 execution plan
+  rejected. DESIGN.md v3 adopts it nearly wholesale (adjudication in v3 §10).
+- Plan of record is now v3 §8 (all JST): deploy v0.1 + ONE real ChatGPT
+  discovery/invocation by 08-30 noon (user-gated — blocking) → M1 thin
+  workspace (SMD genre only, quote-required, declarative rule AST, includes
+  v0.1 hardening backlog) → M2 full KILLED, M2-lite read-only graph as
+  post-freeze stretch → code freeze EOD 08-31 → 09-01 QA/rehearsal → 09-02
+  deploy+regression+video+submit → 09-03 contingency.
+- v0.1 hardening backlog (from Codex, folded into M1): machine-readable
+  staleness in state+tool responses; structured ledger envelope (actor,
+  inputs, spec hash, evidence version, result hash); console actions
+  attributed to human; reads logged or contract narrowed; quote+source
+  required in propose_study; dedupe key beyond author/year/yi; partial
+  registration reported as degraded, not active.
+- AWAITING USER: hosting auth for deploy, ChatGPT desktop test session, and
+  GO on thinned M1.
+
+## ★ REVIEW REQUEST FOR CODEX (GPT-5.6 Sol) — 2026-08-29 (FULFILLED — see status above)
 
 Codex: please review `docs/DESIGN.md` (DRAFT v2) — the full design for
 "Living Evidence Atlas" (claim-graph platform layer above the shipped v0.1
