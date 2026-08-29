@@ -17,6 +17,22 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
+## Status (2026-08-29 vision documentation pass)
+
+- Vision pass DONE (Fable orchestration + Opus×3 drafters + Fable×3 adversarial
+  reviewers, then Fable applied fixes): README gained "The bigger picture", SPEC
+  gained "v0.2 direction — toward an executable layer for science" (8-verb
+  sketch + v0.1 correspondence table, membrane/enclave, ledger-multiplicity,
+  workspace recursion + harmonization caveat, versioning, cold start, non-goals
+  — all explicitly UNIMPLEMENTED), SUBMISSION Inspiration/What's-next/video
+  rewritten around the why-now argument ("for an agent, reading is rerunning").
+  Canon = scratchpad vision-brief.md (13 sections), distilled from the owner's
+  two vision messages; key vocabulary: executable layer for science,
+  auditability infrastructure (NOT truth machine), survived-N-cross-examinations.
+  Review must-fixes applied: overpacked video closer trimmed; "fabricated data
+  reruns faithfully" corrected to "may rerun cleanly" (canon hedges this).
+  v0.1-shipped vs v0.2-direction boundary is stated in all three files — keep it.
+
 ## Status (2026-08-29 overnight build)
 
 DONE:

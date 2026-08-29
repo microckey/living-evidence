@@ -5,7 +5,7 @@
 Living Evidence is a web-native document format for the age of machine readers:
 the page carries its **prose for humans**, its **data and analysis code**, and a
 **[WebMCP](https://webmachinelearning.github.io/webmcp/) tool contract** that lets
-the reader's own AI agent re-run, stress-test, and extend every analysis — with
+the reader's own AI agent rerun, stress-test, and extend every analysis — with
 every result rendered back into the page the human is reading.
 
 The exemplar document is a **living meta-analysis of the Pygmalion effect**
@@ -99,6 +99,35 @@ node verify/e2e.mjs
 A Living Evidence document is **static hosting only** — no backend, no accounts,
 no platform. Copy `template.html` + `lib/`, embed your study table, mark your
 claims, deploy the folder anywhere HTML can be served. See
+[`docs/SPEC.md`](docs/SPEC.md).
+
+## The bigger picture
+
+2010s: paper + PDF. 2020s: paper + executable code and data. 2026+: paper +
+executable code and data + **machine-addressable claims and agent tools**.
+
+eLife's Executable Research Articles proved the middle step was publishable — and
+showed why it stayed niche: supply without demand. Authoring cost was real, and
+human readers almost never rerun anything. Machine readers rerun constantly.
+**For an agent, reading is rerunning** — agents are the demand side executable
+publishing has been waiting for.
+
+Where that points — a **direction this repo is aiming at, not software that
+exists** — is an *executable layer for science*: a minimal common protocol under
+which a Nature paper, a university page and a lone researcher's site all look
+identical to an agent, so a question nobody computed at publication time (*“does
+this effect survive restricting to age ≥ 65?”*) becomes askable retroactively
+across an entire literature. The v0.2 verb sketch:
+
+`list_claims() · inspect_claim() · get_evidence() · get_analysis_spec() · rerun_claim() · get_effect_estimate() · get_data_manifest() · get_reproducibility_status()`
+
+None of that is shipped. What ships here is v0.1 — the smallest complete loop of
+that idea, hand-built for one document genre. And the ceiling is worth stating
+plainly: this is **auditability infrastructure, not a truth machine**. WebMCP does
+not improve experimental design — a bad design reruns faithfully, a wrong model
+reruns precisely wrong. It collapses the cost of verification, comparison and
+re-analysis; science gets faster as a consequence of cheap auditing, not because
+machines find truth. Full direction: the v0.2 section of
 [`docs/SPEC.md`](docs/SPEC.md).
 
 ## License & data

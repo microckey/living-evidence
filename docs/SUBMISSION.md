@@ -19,6 +19,13 @@ prose — and then guesses at the arithmetic. The "executable papers" movement
 *human* readers: sliders, Run buttons, notebooks. But the fastest-growing
 readership of documents is machines, and for them nothing changed.
 
+That movement's high-water mark, eLife's ERA, proved the supply side: narrative
++ code + data + in-browser re-execution, published for real. It stayed niche
+because the demand side was missing — authoring costs something, and human
+readers almost never rerun anything. Machine readers rerun constantly. **For an agent, reading is
+rerunning.** Agents are the demand side that executable publishing has been
+waiting for.
+
 WebMCP finally gives a document a way to hand **typed tools** to whatever agent
 the reader brings. We asked: what should a scientific document look like when its
 primary readers include AI agents? Our answer: a document that can be
@@ -81,11 +88,60 @@ contract including the human approval flow.
 
 ### What's next
 
-The claims/ledger/approval contract is genre-independent. Next engines behind
-the same format: clinical-trial re-analysis, forecasting scorecards that grade
-themselves as outcomes arrive, and policy dashboards. And because a Living
-Evidence document is a static folder, an "arXiv overlay" of cross-examinable
-meta-analyses needs no platform at all — just authors.
+What ships today is **v0.1**: one genre (the living meta-analysis), hand-built,
+but the smallest *complete* loop — addressable claims, deterministic checks,
+agent-composed re-analysis, a visible ledger, a human approval gate. Everything
+below is **v0.2: a direction, not shipped software.**
+
+**A minimal common protocol.** Generalize the contract to eight verbs any
+compliant publication would answer: `list_claims`, `inspect_claim`,
+`get_evidence`, `get_analysis_spec`, `rerun_claim`, `get_effect_estimate`,
+`get_data_manifest`, `get_reproducibility_status`. v0.1 already carries their
+embryos — `evaluate_claim` is `inspect_claim` + `rerun_claim` under the
+document's own rule; `run_meta_analysis {method, exclude}` is `rerun_claim`
+with parameters, for one genre. If a Nature paper, a university page, a lone
+researcher's site and a data-journalism piece all look *identical* to an agent,
+then questions nobody computed at publication time become askable
+retroactively, across an entire literature: *"does this effect survive
+restricting to age ≥ 65?"* — asked of every paper, one `rerun_claim` at a time.
+And because each paper reruns the interaction inside its own data, the synthesis
+sidesteps the ecological bias that today's study-level meta-regression suffers —
+the protocol tightens existing practice, not just extends it.
+Sensitive data never has to move: a document exposes `rerun_claim`, never
+`get_raw_data`, so the computation goes to the data and only aggregates come
+back. HTML standardized *displaying* documents; this would standardize
+*operating on* their claims, with WebMCP as the interface layer.
+
+**The workspace.** A researcher's hypothesis-centered Evidence Map — papers,
+datasets, and their own reruns as nodes — is itself a Living Evidence document:
+private and dynamic, publishable as a living review once it matures. And in
+agent-mediated work, papers that can *answer* get used, cited and weighted more
+than papers that can only be read. That market pressure, not a mandate, is the
+realistic adoption engine.
+
+**Peer review inverts.** "Show Figure 3 without the outliers" stops being a
+letter to the authors and becomes `rerun_claim("claim-7", {exclude_outliers:
+true})` — ten seconds, in the reviewer's own agent. Authors run the same battery
+before submitting (v0.1's claim checks, used as self-audit). Review stops being
+the first audit and becomes a check on an audit record.
+
+**What it is not.** Not a truth machine. WebMCP does not improve a bad
+experimental design; a wrong model reruns precisely wrong, and fabricated data
+may rerun cleanly. This is **auditability infrastructure**: it collapses the
+cost of verification, comparison and re-analysis, makes multiplicity countable
+in a ledger instead of self-reported, and leaves fragile, choice-dependent
+claims living under the expectation that someone's agent will eventually probe
+them. It lowers the price of honesty and raises the risk of dishonesty. Science
+gets faster as a *consequence* of cheap auditing — not because machines find
+truth.
+
+The near work is unglamorous and already unblocked: the claims/ledger/approval
+contract is genre-independent, so other engines can sit behind the same format
+(clinical-trial re-analysis, forecasting scorecards that grade themselves as
+outcomes arrive, policy dashboards), and because a Living Evidence document is
+just a static folder, an "arXiv overlay" of cross-examinable documents needs no
+platform at all — just authors. This is not a new PDF; it is the first page of
+an executable layer for science.
 
 **Try it live:** ⟨deploy URL⟩ · **Code (MIT):** ⟨repo URL⟩
 
@@ -98,15 +154,17 @@ voiceover in English. ⟨Re-time after a dry run.⟩
 
 **[0:00–0:20] The problem (screen: any PDF paper, then an AI chat citing it)**
 > "When an AI reads a document, it reads the words — and guesses at the numbers.
-> We built documents that fight back. This is Living Evidence: documents your AI
-> can cross-examine."
+> The fastest-growing readership of documents is machines, and almost nobody
+> writes for them. So we did. This is Living Evidence: documents your AI can
+> cross-examine."
 
 **[0:20–0:45] Meet the exemplar (screen: index.html, scroll slowly)**
 > "This is a real meta-analysis — the Pygmalion effect, nineteen classic
 > experiments on whether teacher expectations raise children's IQ. Every number
 > here is computed in the browser from the study data embedded in the page. The
 > highlighted sentences are claims — each with a deterministic check behind it.
-> And in a WebMCP browser, my AI just got twelve tools to interrogate all of it."
+> And in a WebMCP browser, the machine reader gets twelve typed tools to
+> interrogate all of it."
 
 **[0:45–1:20] Cross-examination (screen: ChatGPT built-in browser side-by-side)**
 > Type: *"Cross-examine this document's claims."*
@@ -132,9 +190,10 @@ voiceover in English. ⟨Re-time after a dry run.⟩
 
 **[2:20–2:45] Zoom out (screen: audit ledger, then template.html + SPEC)**
 > "Every question left a trace — a visible, append-only ledger on the document
-> itself. And this isn't one page: it's a format. Spec, runtime, template — MIT,
-> zero dependencies, static hosting. Anyone can publish a document that can be
-> cross-examined. The web's documents just learned to answer for themselves."
+> itself. And this isn't one page: it's a format — MIT, zero dependencies,
+> static hosting. Human readers almost never rerun anything; agents rerun
+> constantly — for an agent, reading is rerunning. This is not a new PDF. It's
+> the first page of an executable layer for science."
 
 ---
 
