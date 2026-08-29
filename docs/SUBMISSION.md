@@ -54,9 +54,26 @@ Open it with your agent (ChatGPT's built-in browser, or Chrome with WebMCP) and:
   renders an approval card, and **nothing enters the evidence base until the
   human clicks Approve** — then the forest plot re-renders and old verdict
   badges are marked stale until re-tested.
-- **Nothing is invisible.** Every tool call — agent's or human's — lands in an
-  append-only audit ledger on the page. A Tool console exposes the identical
-  tool surface to humans, so nothing an agent can do is hidden from you.
+- **Nothing is invisible.** Every analysis, verdict and mutation — agent's or
+  human's — lands in an append-only, structured audit ledger on the page. A
+  Tool console exposes the identical tool surface to humans, so nothing an
+  agent can do is hidden from you.
+- **Reading compiles into publishing.** The companion **workspace** is an
+  empty document of the same format: your agent proposes studies from papers
+  you give it (source + verbatim quote required, approval bound to a record
+  hash), you approve each one, claims get declarative machine checks — and
+  `export_document` compiles the whole thing into a single self-contained
+  HTML file: a living document anyone else can cross-examine, no server
+  required.
+- **The map computes what's missing.** The **mini-Atlas** indexes the
+  exemplar's literature as a live evidence map — the estimand cell, six
+  machine-checkable claims, nineteen records, and **gaps computed from the
+  data itself**: the 8–16-week band of prior teacher–pupil contact that no
+  study has ever sampled, surfaced live with a study-brief card that lists
+  the design inputs an experiment would need — filled where the evidence can
+  fill them, named as unresolved where it can't, and deliberately computing
+  **no** sample size from inputs that don't exist. Your agent explores it
+  through tools; every probe lights up on the map you're looking at.
 
 Three design rules make it trustworthy: **the page computes, the agent judges**
 (no LLM arithmetic — the embedded stats engine is validated against R's
@@ -71,8 +88,11 @@ registration per the W3C draft (12 tools, JSON-schema'd,
 meta-analysis engine (REML/DerSimonian-Laird random effects, mixed-effects
 meta-regression, subgroup Q-tests, leave-one-out, Egger's test, cumulative MA)
 golden-tested against published metafor output; theme-aware SVG figure
-renderers; a Playwright E2E suite (52 checks) that drives the full tool
-contract including the human approval flow.
+renderers; claims expressed as a declarative rule AST (no code, no eval —
+auditable and exportable); and four unit/real-browser Playwright suites
+(370+ checks) driving the full tool contract: cross-examination, the human
+approval flow, persistence, and the exported document itself re-tested
+standalone with zero network access.
 
 ### Challenges & what we learned
 
@@ -166,34 +186,45 @@ voiceover in English. ⟨Re-time after a dry run.⟩
 > And in a WebMCP browser, the machine reader gets twelve typed tools to
 > interrogate all of it."
 
-**[0:45–1:20] Cross-examination (screen: ChatGPT built-in browser side-by-side)**
+**[0:45–1:15] Cross-examination (screen: ChatGPT built-in browser side-by-side)**
 > Type: *"Cross-examine this document's claims."*
 > "Watch the page. The agent tests the textbook claim — the one from every
-> psychology course — and it comes back CHALLENGED, right there in the prose:
-> pooled across all nineteen studies, the effect isn't significant. But the
-> moderator claim comes back SUPPORTED: the effect appears only when teachers had
-> known their pupils for less than a week. The story doesn't collapse — it turns."
+> psychology course — and it comes back CHALLENGED, right in the prose: pooled
+> across nineteen studies, the effect isn't significant. But the moderator
+> claim comes back SUPPORTED: the effect appears only when teachers had known
+> their pupils for less than a week. The story doesn't collapse — it turns."
 
-**[1:20–1:45] The document can lose (screen: c-bias claim)**
+**[1:15–1:35] The document can lose (screen: c-bias claim)**
 > Type: *"How solid is the publication-bias claim?"*
 > "NUANCED — Egger's test p = 0.057. The document's own wording overstates the
 > evidence, and its own check says so. A format for honest documents has to be
 > able to lose an argument about itself."
 
-**[1:45–2:20] The living part (screen: propose_study → approval card)**
+**[1:35–2:00] The living part (screen: propose_study → approval card)**
 > Type: *"A new ⟨2026⟩ replication reports d = ⟨…⟩ — add it to the evidence base."*
-> "The agent files the proposal. But look — nothing changes yet. The page asks
-> ME. One click: the evidence base goes from nineteen studies to twenty, the
-> forest plot re-renders, and every earlier verdict is marked stale until it's
-> re-tested. Agents propose. Humans decide. ⟨On-screen label: demo uses a
-> clearly-marked hypothetical replication.⟩"
+> "The agent files the proposal — but nothing changes yet. The page asks ME.
+> One click: nineteen studies become twenty, the forest plot re-renders, and
+> every earlier verdict is marked stale until re-tested. Agents propose.
+> Humans decide. ⟨On-screen label: demo uses a clearly-marked hypothetical
+> replication.⟩"
 
-**[2:20–2:45] Zoom out (screen: audit ledger, then template.html + SPEC)**
-> "Every question left a trace — a visible, append-only ledger on the document
-> itself. And this isn't one page: it's a format — MIT, zero dependencies,
-> static hosting. Human readers almost never rerun anything; agents rerun
-> constantly — for an agent, reading is rerunning. This is not a new PDF. It's
-> the first page of an executable layer for science."
+**[2:00–2:20] Build your own (screen: workspace.html, empty → populated → export)**
+> "This is the workspace — empty. My agent proposes studies from papers, each
+> with a verbatim quote; I approve every record. One click compiles it all
+> into a single self-contained file — a living document anyone else can
+> cross-examine. Reading, here, compiles into publishing."
+
+**[2:20–2:40] The map (screen: atlas.html — claims light up, then the coverage gap card)**
+> "And it scales into a map. The same literature, indexed live: claims with
+> verdicts, nineteen records, and gaps the page computes itself — this band,
+> eight to sixteen weeks, is empty. An experiment nobody has run, surfaced by
+> the evidence, with its design inputs listed — and no pretend sample size."
+
+**[2:40–2:55] Zoom out (screen: audit ledger, then template.html + SPEC)**
+> "Every question left a trace in an append-only ledger. It's a format — MIT,
+> zero dependencies, static hosting. For an agent, reading is rerunning.
+> This is not a new PDF. It's the first page of an executable layer for
+> science."
 
 ---
 

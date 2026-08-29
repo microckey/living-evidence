@@ -63,6 +63,12 @@ approve them, claims get declarative machine checks, and `export_document`
 compiles the whole thing into one self-contained HTML file — a living document
 anyone else can cross-examine, no server required.
 
+**Explore the map** — open `atlas.html`: the same literature as a live
+evidence map. Ask your agent *"what's missing from this literature?"* — it
+calls `get_gaps`, and the answer (an empty 8–16-week band, computed from the
+data on the spot) lights up on the map you're looking at, with a study brief
+that names the design inputs a follow-up experiment would need.
+
 **Locally**
 
 ```bash
@@ -76,6 +82,7 @@ python3 -m http.server 8501 --bind 127.0.0.1   # from the repo root
 |---|---|
 | `index.html` | The exemplar living meta-analysis (Pygmalion effect, 19 studies) |
 | `workspace.html` | The workspace: build your own evidence base with your agent (propose → approve → synthesize), then export it as a self-contained living document |
+| `atlas.html` | The mini-Atlas: the exemplar's literature as a live, read-only evidence map — cell, claims, records, and computed gaps (including the empty 8–16-week band no study ever sampled) |
 | `lib/living-evidence.js` | Format runtime: WebMCP registration, 12-tool document / 15-tool workspace contract, structured audit ledger, claim badges, approval queue, persistence, single-file export, tool console |
 | `lib/meta-stats.js` | Dependency-free meta-analysis engine: REML/DL random effects, fixed effects, subgroups, meta-regression, leave-one-out, Egger’s test, cumulative MA |
 | `lib/meta-plots.js` | Theme-aware SVG forest / funnel / sensitivity / bubble plots |

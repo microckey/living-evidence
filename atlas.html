@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Living Evidence Atlas — mini</title>
+<meta name="description" content="A read-only evidence map over one estimand cell: 19 Pygmalion records, 6 machine-checkable claims, and three gaps computed live from the data — explorable by you and by your AI agent on the same page.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>">
+<link rel="stylesheet" href="lib/living-evidence.css">
+<style>
+  html { background: var(--le-paper); }
+  body {
+    margin: 0; padding: 0 1.2rem 4rem; background: var(--le-paper); color: var(--le-ink);
+    font-family: Iowan Old Style, Palatino, Georgia, serif; font-size: 17px; line-height: 1.65;
+  }
+  main { max-width: 64rem; margin: 0 auto; }
+  header.doc { margin: 3rem 0 1.5rem; }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
+  .subtitle { color: var(--le-muted); font-size: 1.05rem; margin: 0 0 1.2rem; max-width: 46rem; }
+  h2 { font-size: 1.3rem; margin: 2.4rem 0 0.6rem; }
+  h3 { font-size: 1.05rem; margin: 1.6rem 0 0.4rem; }
+  a { color: var(--le-accent); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.86em; background: var(--le-code); padding: 0.05em 0.35em; border-radius: 4px; }
+  p.lede { max-width: 46rem; }
+  .standfirst, .honesty, .howto {
+    border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent);
+    background: var(--le-card); border-radius: 10px; padding: 0.9rem 1.1rem; font-size: 0.92em; margin: 1.2rem 0;
+  }
+  .honesty { border-left-color: var(--le-warn); }
+  .honesty strong { color: var(--le-warn); }
+  .howto { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 720px) { .howto { grid-template-columns: 1fr; } }
+  .howto h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+  .howto p, .standfirst p, .honesty p { margin: 0.3rem 0; }
+  .maprow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.4rem; }
+  .caption { font-size: 0.85em; color: var(--le-muted); max-width: 52rem; margin: 0.5rem 0 0; }
+  details { margin: 1rem 0; border: 1px solid var(--le-border); border-radius: 10px; background: var(--le-card); padding: 0.6rem 1rem; }
+  summary { cursor: pointer; font-weight: 650; }
+  .refs { font-size: 0.85em; color: var(--le-muted); }
+  footer { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--le-border); color: var(--le-muted); font-size: 0.85em; }
+</style>
+</head>
+<body>
+<main>
+  <header class="doc">
+    <h1>Living Evidence Atlas — mini</h1>
+    <p class="subtitle">One estimand cell, nineteen records, six machine-checkable claims and three gaps the page
+    computes about itself — as a map you and your agent explore together.</p>
+    <div class="le-status" id="atlas-status"><span class="le-status-dot le-off"></span><span>Initializing agent interface…</span></div>
+  </header>
+
+  <div class="standfirst">
+    <p><strong>What this is.</strong> A <a href="index.html">living document</a> answers questions about its own
+    literature. An <em>Atlas</em> is the index above many such documents: it holds the derived layer — the graph of
+    cells, claims, records and edges, the syntheses, and the <em>gaps</em> that fall out of them. This page is that
+    direction rendered at demo scale, over the one literature this project ships: teacher expectancy and pupil IQ.</p>
+    <p>Everything on the map is computed in your browser from the same 19 records the document carries, and the six
+    claims are imported from the same module the document boots from — the map’s rules cannot drift from the
+    document’s (one shared module), and the test suite holds the displayed sentences to the same text.
+    Design rationale and the full ontology: <a href="docs/DESIGN.md">DESIGN.md</a> (§7 for the layer this belongs to).
+    Siblings: the <a href="index.html">exemplar document</a> and the <a href="workspace.html">workspace</a> that builds
+    one.</p>
+  </div>
+
+  <div class="honesty">
+    <p><strong>This is the Atlas <em>direction</em> at demo scale: one literature, computed live, read-only.</strong>
+    No dossier scores, no numeric power, record verification rungs unassigned.</p>
+    <p class="refs">Nothing here mutates the graph or the evidence base — there is no <code>propose_edge</code>, no
+    persistence and no backend. The <code>weeks</code> moderator is labelled <em>candidate</em> because it is a
+    study-level, observational comparison across randomized experiments, not a randomized contrast. Gaps are computed
+    from <em>this</em> collection frame: “unknown / not-searched” is a different state from “measured and absent”.</p>
+  </div>
+
+  <div class="howto">
+    <div>
+      <h3>If you are a human</h3>
+      <p>Click any node — the estimand cell in the middle, a claim, one of the nineteen record dots, or a dashed gap
+      card on the right. Its detail opens in the panel. Every node is keyboard-reachable: tab to it and press Enter.
+      You can run the agent’s tools yourself from the <a href="#console">Tool console</a>.</p>
+    </div>
+    <div>
+      <h3>If you are an agent</h3>
+      <p>Call <code>atlas_overview</code> first. <code>get_cell</code>, <code>list_claims</code> and
+      <code>get_gaps</code> are pure reads; <code>evaluate_claim</code>, <code>synthesize</code>,
+      <code>get_study_brief</code> and <code>focus_node</code> render into the map the human is looking at and land in
+      the ledger. Cite numbers from the tools, never from the picture.</p>
+    </div>
+  </div>
+
+  <h2>The map</h2>
+  <div class="maprow">
+    <div class="atlas-frame" id="atlas-map"></div>
+    <p class="caption">One estimand cell (centre), the two constructs it relates, the document that asserts claims
+    about it, the six claims (upper arc), the nineteen evidence records (lower fan — dot size grows with precision
+    (1/v<sub>i</sub>), floored for legibility; colour by weeks of prior teacher–pupil contact, ordered left to right
+    by that same field), the candidate moderator, and three computed gaps (dashed, right).</p>
+  </div>
+
+  <h2>Detail</h2>
+  <div id="atlas-panel">
+    <p class="atlas-panel-empty">Nothing selected yet — pick a node on the map, or let your agent drive
+    (<code>focus_node</code>). Whatever either of you opens, both of you see.</p>
+  </div>
+
+  <h2 id="ledger">Audit ledger</h2>
+  <p class="refs">Append-only record of everything done to this map in your session — by agents and by you. Pure reads
+  are not ledgered; anything that changes what is on screen is.</p>
+  <ol class="le-ledger" id="atlas-ledger"></ol>
+
+  <h2 id="console">Tool console</h2>
+  <details>
+    <summary>Drive the map’s tools by hand (no agent required)</summary>
+    <p class="refs">The same eight tools an agent sees through WebMCP — same schemas, same effects on the map, same
+    ledger. It exists so that nothing an agent can do here is hidden from you.</p>
+    <div id="atlas-console"></div>
+  </details>
+
+  <h2>Notes on what is computed and what is not</h2>
+  <p class="refs">The synthesis is a random-effects model (REML by default; DerSimonian–Laird and fixed-effect through
+  <code>synthesize</code>), validated against R <code>metafor</code> for this dataset — all published reference values
+  (the REML fit and the capped-weeks meta-regression) reproduced to published precision. The coverage gap is the
+  largest interior gap between observed values of prior contact, and the zero-crossing quoted on its card comes from a
+  live meta-regression fit on min(weeks, 3): neither that band nor that crossing point is typed in — change the records
+  and both move. Two things on this page <em>are</em> authored rather than computed, and are labelled as such: the
+  legend’s week bands (≤ 1 / 2–7 / ≥ 17) are a display choice, and the cap at 3 weeks is a modelling choice about
+  functional form, not a fitted parameter.
+  The study brief deliberately stops short of a sample size: the design inputs that would justify one (an equivalence
+  margin, a design effect, an allocation ratio, attrition, α and power) do not exist in this corpus, and a pooled τ² is
+  not an outcome variance. Subgroup and moderator statements are observational comparisons across randomized
+  experiments and can be confounded by other study features.</p>
+
+  <footer>
+    <p><strong>Living Evidence v0.1 — Atlas mini.</strong> Read-only evidence map over one estimand cell. Source, format
+    spec and design document: <a href="https://github.com/microckey/living-evidence">github.com/microckey/living-evidence</a>
+    (MIT). Study-level data from the open metadat distribution of <code>dat.raudenbush1985</code>, © the original
+    authors. The page’s public API is <code>window.LivingEvidenceAtlas</code>.</p>
+    <p><noscript>This page requires JavaScript: the map, its statistics and its gaps are computed, not drawn in advance.</noscript></p>
+  </footer>
+</main>
+
+<script type="module">
+  import { initAtlas } from './lib/atlas.js';
+  import { DATASET } from './data/raudenbush1985.js';
+  import { CLAIMS } from './data/pygmalion-claims.js';
+
+  initAtlas({ dataset: DATASET, claims: CLAIMS });
+</script>
+</body>
+</html>

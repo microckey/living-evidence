@@ -135,3 +135,85 @@
 .le-console-desc { font-size: 0.82em; color: var(--le-muted); margin-bottom: 0.5em; }
 .le-console-args { width: 100%; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.82em; border: 1px solid var(--le-border); border-radius: 8px; background: var(--le-card); color: var(--le-ink); padding: 0.6em; box-sizing: border-box; }
 .le-console-out { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.78em; background: var(--le-code); border: 1px solid var(--le-border); border-radius: 8px; padding: 0.8em; overflow-x: auto; max-height: 320px; overflow-y: auto; white-space: pre-wrap; }
+
+/* ---------------------------------------------------------------- atlas ---
+   The read-only evidence map: atlas.js + atlas.html. Same tokens as everything
+   above — the map is a component of this format, not a second skin. (These rules
+   ride along into exported documents, which is harmless: an exported document has
+   no map, and a stray selector costs less than a second stylesheet to keep in
+   sync. Do not write module paths into this file, in comments either:
+   workspace.e2e.mjs asserts that an exported document references nothing under
+   the library directory, and this stylesheet is inlined into it.) */
+
+.atlas-frame {
+  border: 1px solid var(--le-border); border-radius: 12px; background: var(--le-card);
+  padding: 0.5rem 0.6rem; overflow-x: auto;
+}
+.atlas-map { width: 100%; height: auto; display: block; color: var(--le-ink); min-width: 760px; }
+
+/* edges: thin, quiet, dashed where the thing they connect is an absence */
+.atlas-edge { stroke: var(--le-border); stroke-width: 1; fill: none; }
+.atlas-edge-evidence { stroke-width: 0.8; }
+.atlas-edge-moderates { stroke-dasharray: 6 3; }
+.atlas-edge-dashed { stroke-dasharray: 4 4; }
+
+/* nodes */
+.atlas-node { cursor: pointer; }
+.atlas-shape { fill: var(--le-card); stroke: var(--le-border); stroke-width: 1; }
+.atlas-node-cell .atlas-shape { fill: var(--le-accent-soft); stroke: var(--le-accent); stroke-width: 1.6; }
+.atlas-node-gap .atlas-shape { stroke-dasharray: 5 4; stroke: var(--le-muted); }
+.atlas-node-claim .atlas-shape { stroke: var(--le-accent); }
+.atlas-node-document .atlas-shape { stroke: var(--le-ink); }
+.atlas-dot { stroke: var(--le-card); stroke-width: 1; }
+/* record fill by band of prior teacher–pupil contact (defined after .atlas-shape,
+   which sets the card fill every other node wants) */
+.atlas-band-w0_1 { fill: var(--le-accent); }
+.atlas-band-w2_7 { fill: var(--le-warn); }
+.atlas-band-w17plus { fill: var(--le-muted); }
+.atlas-band-unobserved { fill: var(--le-bad); }
+.atlas-node:hover .atlas-shape { stroke: var(--le-accent); }
+.atlas-t { fill: var(--le-ink); }
+.atlas-t-muted { fill: var(--le-muted); }
+.atlas-t-accent { fill: var(--le-accent); font-variant-numeric: tabular-nums; }
+.atlas-verdict-supported { fill: var(--le-good); }
+.atlas-verdict-challenged { fill: var(--le-bad); }
+.atlas-verdict-nuanced { fill: var(--le-warn); }
+.atlas-legend-dot { stroke: var(--le-card); stroke-width: 1; }
+
+/* selection: one accent ring, everything else dimmed via a class on the SVG root */
+.atlas-ring { fill: none; stroke: var(--le-accent); stroke-width: 2.5; opacity: 0; }
+.atlas-node.atlas-selected .atlas-ring { opacity: 1; }
+.atlas-map.atlas-has-selection .atlas-node { opacity: 0.42; }
+.atlas-map.atlas-has-selection .atlas-node.atlas-selected { opacity: 1; }
+.atlas-map.atlas-has-selection .atlas-edges { opacity: 0.3; }
+.atlas-node:focus { outline: none; }
+.atlas-node:focus-visible .atlas-ring { opacity: 1; stroke-dasharray: 4 3; }
+.atlas-map.atlas-has-selection .atlas-node:focus-visible { opacity: 1; }
+
+/* detail panel */
+.atlas-panel-empty { color: var(--le-muted); font-style: italic; font-size: 0.92em; }
+.atlas-card {
+  border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent);
+  border-radius: 12px; background: var(--le-card); padding: 0.9em 1.1em; margin: 0.8em 0;
+}
+.atlas-kicker { font-size: 0.72em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--le-muted); }
+.atlas-card-title { margin: 0.15em 0 0.5em; font-size: 1.05rem; }
+.atlas-h4 { margin: 1em 0 0.3em; font-size: 0.92rem; }
+.atlas-lede { margin: 0.3em 0 0.7em; }
+.atlas-kv { border-collapse: collapse; font-size: 0.86em; width: 100%; }
+.atlas-kv th {
+  text-align: left; font-weight: 500; color: var(--le-muted); vertical-align: top;
+  padding: 0.2em 0.9em 0.2em 0; white-space: nowrap;
+}
+.atlas-kv td { padding: 0.2em 0; vertical-align: top; }
+.atlas-note { font-size: 0.82em; color: var(--le-muted); margin: 0.7em 0 0; }
+.atlas-explicit-note {
+  font-size: 0.86em; margin: 0.8em 0 0; padding: 0.6em 0.8em;
+  border: 1px dashed var(--le-warn); border-radius: 8px; color: var(--le-ink);
+}
+.atlas-list { font-size: 0.86em; margin: 0.3em 0; padding-left: 1.2em; }
+.atlas-list li { margin: 0.25em 0; }
+.atlas-figure { margin: 0.8em 0 0.2em; overflow-x: auto; }
+.atlas-chip { vertical-align: baseline; margin-left: 0.5em; }
+.atlas-ast { margin: 0.7em 0; }
+.atlas-ast summary { font-size: 0.84em; font-weight: 500; color: var(--le-muted); }

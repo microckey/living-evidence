@@ -17,7 +17,40 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
-## Status (2026-08-29 M1 COMPLETE — CURRENT)
+## Status (2026-08-30 M2-lite — CURRENT)
+
+- **M2-lite (atlas.html) implemented per docs/M2LITE-SPEC.md** (frozen by
+  Fable): read-only evidence map — 33 nodes (1 estimand cell, 2 constructs,
+  1 doc, 6 claims, 19 records colored by weeks band, mod:weeks "(candidate)",
+  3 COMPUTED gaps), 8 WebMCP tools, M1-parity ledger/console/status. The
+  coverage gap (8–16 weeks) and zero-crossing (≈2.6wk) are computed live from
+  the data — e2e proves it against an independent node-side recomputation
+  (fault-injecting [9,15] goes red). Study brief lists filled + unresolved
+  design inputs, NO numeric sample size (DESIGN §4.5), e2e-enforced.
+- Claims extracted to data/pygmalion-claims.js (shared by index.html + atlas;
+  byte-identical ASTs; e2e.mjs green unmodified).
+- Adversarial round (Fable×3): verdict "approve with wording fixes" — all
+  numbers matched reviewers' independent recomputation; must-fixes were 4
+  honesty sentences ("no band typed in" false universal; "dot area ∝
+  precision" with an affine floor; metafor-validation overclaim on new
+  surfaces; bare R²=100% missing the clipped-boundary caveat), 3 behaviors
+  (p<0.0005 rendered "p = 0" → pFmt '< 0.001'; ledger scrollIntoView hijacked
+  the page scroll ~545px per map click → scoped to the ledger box IN BOTH
+  atlas.js and living-evidence.js; cell aria-label omitted synthesis
+  k/exclusions), 2 test blind spots (brief estimates and glyph↔verdict
+  pairing were unasserted — both proven red-then-green). Fixes applied by
+  Opus; Fable re-verified.
+- **Decision (spec deviation, recorded)**: human map clicks/Enter are
+  ledgered as focus_node navigation rows (spec §1.2 letter said unledgered
+  selectNode) — kept because the page's own ledger caption promises
+  "anything that changes what is on screen is ledgered"; internally
+  consistent and e2e-asserted.
+- **Note**: the ledger-scroll fix touched lib/living-evidence.js post-M1 (one
+  line, same bug); all M1 suites re-run green.
+- Docs updated by Fable: SUBMISSION (atlas beat [2:20–2:40], Devpost map
+  bullet; video re-timed to end 2:55), README (atlas row + Explore-the-map).
+
+## Status (2026-08-29 M1 COMPLETE)
 
 - **M1 shipped and green** (4 suites: stats / rules 93 / e2e 110 / workspace
   e2e 126; independently re-run by Fable after every agent hand-off).
