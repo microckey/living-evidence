@@ -72,16 +72,24 @@
     dataset: DATASET,
     subgroupFields: { dose: { type: 'numeric', default_split: 1 } },
     moderators: { dose: {}, year: {} },
+    // A claim's machine check is DATA (see lib/claim-rules.js): an analysis to run,
+    // and an ordered list of verdicts whose conditions are read off the result.
+    // No functions, no eval — so the rule can be listed, diffed and audited.
     claims: [
       {
         id: 'c-effect',
         rule: 'Supported iff the pooled REML estimate is positive with p < 0.05.',
-        check(A) {
-          const fit = A.overall({ method: 'REML' });
-          if (fit.significant && fit.estimate > 0) {
-            return { verdict: 'supported', reason: `SMD ${fit.estimate}, p = ${fit.p}`, evidence: fit };
-          }
-          return { verdict: 'challenged', reason: `SMD ${fit.estimate}, p = ${fit.p}`, evidence: fit };
+        test: {
+          analysis: 'overall',
+          args: { method: 'REML' },
+          verdicts: [
+            {
+              when: [{ path: 'significant', op: 'eq', value: true }, { path: 'estimate', op: 'gt', value: 0 }],
+              verdict: 'supported',
+              reason: 'SMD {estimate}, p = {p}',
+            },
+            { default: true, verdict: 'challenged', reason: 'SMD {estimate}, p = {p}' },
+          ],
         },
       },
     ],

@@ -17,7 +17,44 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
-## Status (2026-08-29 Codex review round — CURRENT)
+## Status (2026-08-29 M1 COMPLETE — CURRENT)
+
+- **M1 shipped and green** (4 suites: stats / rules 93 / e2e 110 / workspace
+  e2e 126; independently re-run by Fable after every agent hand-off).
+  Built per docs/M1-SPEC.md in two Opus phases + one Fable adversarial review
+  round (3 reviewers) + one Opus fix round:
+  - Phase A: claims are declarative rule ASTs (lib/claim-rules.js; check()
+    functions now a boot error), machine-readable staleness via
+    evidenceVersion, structured ledger envelope (actor/inputs/evidence_version/
+    FNV-1a result_digest; boot=system; pure reads not ledgered), actor
+    attribution through invokeTool opts, propose_study requires source+quote
+    with record_hash binding + possible_duplicate_of, degraded registration
+    status.
+  - Phase B: workspace mode (workspace.html, 15 tools: +set_hypothesis,
+    add_claim, export_document), localStorage persistence w/ corrupt-snapshot
+    resilience, Reset button, and **single-file self-contained export**
+    (import-stripping concat of the 4 lib modules; runs from file:// with
+    zero network — e2e-proven; XSS/`</script>` breakout payload-tested clean).
+  - Review round: 2 must-fix (async export mis-attributed actor — fixed by
+    capturing actor pre-await, red→green proven; SPEC.md contradicted the
+    shipped claims contract — rewritten) + 8 polish applied (restore-path
+    claim-id guard proved LOAD-BEARING: unguarded snapshot id killed boot;
+    favicon data-URI → zero-request export proof; pending-card restore
+    coverage; file:// check; closed-form FE oracle).
+  - Docs updated: SPEC.md (AST grammar, actor triple, M1 deltas, workspace
+    mode section), README (workspace row + Build-your-own section).
+- **Lesson (memo, playbook candidate — observed once)**: in a tool registry
+  where one tool is async and the rest sync, restoring ambient context
+  (currentActor) in a synchronous finally silently mis-attributes the async
+  tool's late ledger writes. Capture ambient context synchronously at async
+  entry, before the first await.
+- NEXT (per DESIGN v3 §8, all JST): deploy + ONE real ChatGPT
+  discovery/invocation (user-gated, was due 8/30 noon) → freeze EOD 8/31 →
+  9/1 QA+rehearsal → 9/2 deploy/regression/video/submit. M2-lite only after
+  freeze + video dry-run. SUBMISSION.md video script needs a workspace/export
+  beat added (~20-30s) — not yet done.
+
+## Status (2026-08-29 Codex review round)
 
 - Codex review executed via `codex exec` (read-only sandbox) → saved to
   docs/DESIGN-REVIEW-CODEX.md. Verdict: vision approved, §8 execution plan

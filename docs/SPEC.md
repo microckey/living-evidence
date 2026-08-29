@@ -26,8 +26,9 @@ the page where the human is reading.
    complete analytical surface of the document, machine-callable with JSON schemas.
 3. **Shared layer** — everything the agent does materializes in the document:
    figures render into the *Reader's Workbench*, claims receive verdict badges,
-   and an append-only *audit ledger* records every call with its actor
-   (`AGENT` / `HUMAN`).
+   and an append-only *audit ledger* records every analysis, verdict and
+   mutation with its actor (`AGENT` / `HUMAN` / `SYSTEM`; pure reads are not
+   ledgered — the overview tool says so).
 
 ## Non-negotiable design rules
 
@@ -85,20 +86,36 @@ dataset: {
 
 ### Claims
 
+A claim's machine check is **data, not code** — a declarative rule AST
+interpreted by `lib/claim-rules.js`. `check()` functions are rejected at boot
+(they would be un-auditable and un-exportable):
+
 ```js
 claims: [{
-  id: 'c-overall',
+  id: 'c-overall',                       // /^[A-Za-z0-9_-]{1,40}$/
   rule: 'Human-readable statement of the deterministic check.',
-  check(analyses) {
-    const fit = analyses.overall({ method: 'REML' });
-    return { verdict: 'supported' | 'challenged' | 'nuanced', reason: '…', evidence: fit };
+  test: {
+    analysis: 'overall',                 // overall | metareg | subgroup | loo | funnel | cumulative
+    args: { method: 'REML' },
+    // optional focus: pick one element of a result collection into ctx.f
+    // focus: { collection: 'groups', match_field: 'group', match_substring: '≤ 1' },
+    verdicts: [                          // ordered; first match wins; last MUST be the default
+      { when: [{ path: 'significant', op: 'eq', value: false },
+               { path: 'estimate', op: 'abs_lt', value: 0.2 }],
+        verdict: 'supported', reason: 'pooled SMD {estimate}, p = {p}' },
+      { default: true, verdict: 'challenged', reason: 'pooled SMD {estimate}, p = {p}' },
+    ],
   },
 }]
 ```
 
-`check` receives the internal analysis registry, so evaluating a claim also renders
-its figure and ledger entries. When the evidence base changes (a proposal is
-approved), existing verdict badges are marked **stale** until re-evaluated.
+Condition ops: `lt le gt ge eq ne abs_lt abs_ge`; paths are dotted
+(`moderator.p`, `f.estimate`, `flips_significance.length`); `{path}`
+placeholders in `reason` interpolate from the analysis result. Running a
+claim's test renders its figure and ledger entries like any analysis. When
+the evidence base changes, existing verdicts become **stale** — machine-
+readably: `list_claims`/`evaluate_claim` carry `stale`, `evaluated_version`
+and `evidence_version`, and the badge is struck through until re-evaluated.
 
 ## Tool contract (v0.1)
 
@@ -120,7 +137,30 @@ approved), existing verdict badges are marked **stale** until re-evaluated.
 Registration follows the W3C draft: `document.modelContext.registerTool({name,
 title, description, inputSchema, annotations, execute})`; `execute` returns a plain
 object (the runtime serializes it). All schemas set `additionalProperties: false`.
-Read-only tools set `annotations.readOnlyHint`.
+Read-only tools set `annotations.readOnlyHint`. Partial registration is reported
+as a **degraded** status (never `active`) with the failed tool names listed.
+
+**M1 hardening deltas** (implemented; supersede anything above that conflicts):
+ledger entries are structured envelopes `{run, time, actor, kind, tool, inputs,
+summary, evidence_version, result_digest}` (digest = FNV-1a of the deterministic
+result payload); pure reads are not ledgered; `propose_study` requires **both**
+`source` and `quote`, computes a `record_hash` at proposal time, and binds the
+human approval to it (approved records carry a structured `provenance` object);
+same author+year with a different effect is accepted but flagged
+`possible_duplicate_of`.
+
+### Workspace mode (M1)
+
+`initLivingEvidence({mode: 'workspace', storageKey, …})` boots the same runtime
+as an **empty, persistent, exportable** evidence base: state (records, pending
+proposals, claims, verdicts, ledger, evidence version) round-trips through
+`localStorage`; three additional tools appear — `set_hypothesis`,
+`add_claim` (declarative test AST only, validated at the tool boundary), and
+`export_document`, which compiles the workspace into a **self-contained
+single-file Living Evidence document** (data + engine + figures + tools inlined;
+runs from `file://` with zero network access). Claims render as a list rather
+than prose spans. A workspace is a private document under construction; its
+export is the published form — the format's recursion, implemented.
 
 ## Scope and versioning
 

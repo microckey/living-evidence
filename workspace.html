@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Living Evidence Workspace — build a document your AI can cross-examine</title>
+<meta name="description" content="An empty Living Evidence document. Your agent proposes the studies and the claims, you approve them, and the finished evidence base exports as a single self-contained file that any other agent can cross-examine.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>">
+<link rel="stylesheet" href="lib/living-evidence.css">
+<style>
+  html { background: var(--le-paper); }
+  body {
+    margin: 0; padding: 0 1.2rem 4rem; background: var(--le-paper); color: var(--le-ink);
+    font-family: Iowan Old Style, Palatino, Georgia, serif; font-size: 17px; line-height: 1.65;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  header.doc { margin: 3rem 0 1.5rem; }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
+  .subtitle { color: var(--le-muted); font-size: 1.05rem; margin: 0 0 1.2rem; }
+  h2 { font-size: 1.3rem; margin: 2.4rem 0 0.6rem; }
+  h3 { font-size: 1.05rem; margin: 1.6rem 0 0.4rem; }
+  a { color: var(--le-accent); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.86em; background: var(--le-code); padding: 0.05em 0.35em; border-radius: 4px; }
+  .hypothesis-block {
+    display: flex; gap: 1rem; align-items: flex-start; justify-content: space-between;
+    border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent);
+    background: var(--le-card); border-radius: 10px; padding: 0.9rem 1.1rem; margin: 1.2rem 0;
+  }
+  .hypothesis-block .label { font-size: 0.72em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--le-muted); }
+  #le-hypothesis { margin: 0.2rem 0 0; font-size: 1.05rem; }
+  .howto {
+    border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent);
+    background: var(--le-card); border-radius: 10px;
+    padding: 0.9rem 1.1rem; font-size: 0.92em; margin: 1.2rem 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  }
+  @media (max-width: 620px) { .howto { grid-template-columns: 1fr; } .hypothesis-block { flex-direction: column; } }
+  .howto h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+  .howto p { margin: 0.3rem 0; }
+  .howto ol { margin: 0.3rem 0; padding-left: 1.2em; }
+  .stat-line { font-variant-numeric: tabular-nums; }
+  figure.main { margin: 1.4rem 0; }
+  details { margin: 1rem 0; border: 1px solid var(--le-border); border-radius: 10px; background: var(--le-card); padding: 0.6rem 1rem; }
+  summary { cursor: pointer; font-weight: 650; }
+  .refs { font-size: 0.85em; color: var(--le-muted); }
+  .workbench-empty { color: var(--le-muted); font-size: 0.92em; font-style: italic; }
+  section.le-has-figures .workbench-empty { display: none; }
+  #pending-section { display: none; }
+  section.le-has-pending#pending-section, #pending-section:has(.le-pending-card) { display: block; }
+  footer { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--le-border); color: var(--le-muted); font-size: 0.85em; }
+</style>
+</head>
+<body>
+<main>
+  <header class="doc">
+    <h1>Living Evidence Workspace</h1>
+    <p class="subtitle">An empty document of the same format — where an agent and a human build the evidence base
+    together, and export it as a living document anyone else can cross-examine.</p>
+    <div class="le-status" id="le-status"><span class="le-status-dot le-off"></span><span>Initializing agent interface…</span></div>
+  </header>
+
+  <div class="hypothesis-block">
+    <div>
+      <div class="label">Hypothesis under examination</div>
+      <p id="le-hypothesis">(not set — use set_hypothesis)</p>
+    </div>
+    <button class="le-btn" id="le-reset" type="button">Reset workspace</button>
+  </div>
+
+  <div class="howto">
+    <div>
+      <h3>You (the human)</h3>
+      <p>You are the approval gate and the editor. Nothing an agent proposes enters the evidence base until you press
+      <em>Approve</em>. Curate the claims, watch the ledger, and when the document is worth keeping, export it —
+      one self-contained file, no server, no dependencies.</p>
+      <p class="refs">This workspace saves itself in this browser only. It never leaves your machine.</p>
+    </div>
+    <div>
+      <h3>Your agent</h3>
+      <ol>
+        <li><code>get_document_overview</code> first — always.</li>
+        <li><code>set_hypothesis</code> to state the question.</li>
+        <li><code>propose_study</code> for each record, with a <strong>source and a verbatim quote</strong>; the human approves.</li>
+        <li><code>add_claim</code> with a declarative machine check, then <code>evaluate_claim</code>.</li>
+        <li><code>export_document</code> when the document stands on its own.</li>
+      </ol>
+    </div>
+  </div>
+
+  <h2>Evidence base</h2>
+  <p class="stat-line">Currently <strong data-le-bind="k">0</strong> approved studies; pooled random-effects (REML)
+  estimate <strong data-le-bind="estimate">—</strong>, 95%&nbsp;CI <strong data-le-bind="ci">—</strong>,
+  <em>p</em>&nbsp;= <strong data-le-bind="p">—</strong> (I²&nbsp;= <span data-le-bind="I2">—</span>,
+  Q&nbsp;= <span data-le-bind="Q">—</span>, <em>p</em>&nbsp;= <span data-le-bind="Q_p">—</span>).</p>
+
+  <figure class="main">
+    <div id="le-main-figure"></div>
+    <figcaption class="refs">The forest plot appears as soon as two studies have been approved, and re-renders on every
+    change to the evidence base.</figcaption>
+  </figure>
+
+  <section id="pending-section">
+    <h2>Proposed studies awaiting your approval</h2>
+    <p class="refs">An agent proposed these. They are not in any analysis yet.</p>
+    <div id="le-pending"></div>
+  </section>
+
+  <h2>Claims</h2>
+  <p class="refs">Claims added with <code>add_claim</code>. Each carries a deterministic machine check expressed as
+  data (no code, no eval), so the rule an agent reads is the rule the page runs. Verdict badges appear here.</p>
+  <ul class="le-claims" id="le-claims-list"></ul>
+
+  <h2 id="workbench">Reader’s Workbench</h2>
+  <section>
+    <p class="workbench-empty">Nothing here yet. Analyses run by your agent (or by you, from the Tool console) render
+    their figures here, newest first.</p>
+    <div id="le-workbench"></div>
+  </section>
+
+  <h2 id="ledger">Audit ledger</h2>
+  <p class="refs">Append-only record of everything done in this workspace — by agents, by you, and by the page itself.
+  It is saved with the workspace and travels nowhere else.</p>
+  <ol class="le-ledger" id="le-ledger"></ol>
+
+  <h2 id="console">Tool console</h2>
+  <details>
+    <summary>Drive the workspace’s tools by hand (no agent required)</summary>
+    <p class="refs">The same tool surface an AI agent sees through WebMCP — same schemas, same effects, same ledger.</p>
+    <div id="le-console"></div>
+  </details>
+
+  <footer>
+    <p><strong>Living Evidence v0.1 — workspace mode.</strong> For a finished document of this format, see the
+    <a href="index.html">Pygmalion-effect exemplar</a>. Source, format spec and authoring template:
+    <a href="https://github.com/microckey/living-evidence">github.com/microckey/living-evidence</a> (MIT).</p>
+    <p><noscript>This workspace requires JavaScript: its statistics are computed, not typeset.</noscript></p>
+  </footer>
+</main>
+
+<script type="module">
+  import { initLivingEvidence } from './lib/living-evidence.js';
+
+  initLivingEvidence({
+    mode: 'workspace',
+    storageKey: 'le-workspace-v1',
+    title: 'Living Evidence Workspace',
+    hypothesis: '(not set — use set_hypothesis)',
+    dataset: {
+      id: 'workspace',
+      label: 'Your evidence base',
+      effect_measure: 'SMD',
+      fields: {
+        yi: 'standardized mean difference (Hedges-type d)',
+        vi: 'sampling variance of yi',
+        weeks: 'weeks of prior teacher-student contact before induction',
+        setting: 'testing setting (group / individual)',
+        tester: 'tester aware or blind to condition',
+      },
+      studies: [],
+    },
+    subgroupFields: {
+      weeks: { type: 'numeric', default_split: 1 },
+      setting: { type: 'categorical' },
+      tester: { type: 'categorical' },
+    },
+    moderators: { weeks: {}, year: {} },
+    claims: [],
+  });
+</script>
+</body>
+</html>

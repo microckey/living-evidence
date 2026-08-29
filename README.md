@@ -57,6 +57,12 @@ Three design rules make this trustworthy rather than merely automated:
 document’s **Tool console** (same tools, same schemas, same ledger). Open the
 page, expand “Tool console”, run `evaluate_claim` on `c-bias`.
 
+**Build your own** — open `workspace.html`: an empty document of the same
+format. Your agent proposes studies (source + verbatim quote required), you
+approve them, claims get declarative machine checks, and `export_document`
+compiles the whole thing into one self-contained HTML file — a living document
+anyone else can cross-examine, no server required.
+
 **Locally**
 
 ```bash
@@ -69,7 +75,8 @@ python3 -m http.server 8501 --bind 127.0.0.1   # from the repo root
 | Path | What it is |
 |---|---|
 | `index.html` | The exemplar living meta-analysis (Pygmalion effect, 19 studies) |
-| `lib/living-evidence.js` | Format runtime: WebMCP registration, 12-tool contract, ledger, claim badges, approval queue, tool console |
+| `workspace.html` | The workspace: build your own evidence base with your agent (propose → approve → synthesize), then export it as a self-contained living document |
+| `lib/living-evidence.js` | Format runtime: WebMCP registration, 12-tool document / 15-tool workspace contract, structured audit ledger, claim badges, approval queue, persistence, single-file export, tool console |
 | `lib/meta-stats.js` | Dependency-free meta-analysis engine: REML/DL random effects, fixed effects, subgroups, meta-regression, leave-one-out, Egger’s test, cumulative MA |
 | `lib/meta-plots.js` | Theme-aware SVG forest / funnel / sensitivity / bubble plots |
 | `lib/living-evidence.css` | Component styles (light/dark) |

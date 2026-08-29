@@ -226,82 +226,152 @@
       tester: { type: 'categorical' },
     },
     moderators: { weeks: {}, year: {} },
+    // Claims are DATA, not code: each `test` is a declarative AST the rule engine
+    // (lib/claim-rules.js) walks — no eval, nothing to hide. An agent can read the
+    // exact rule through list_claims before deciding whether the verdict means
+    // anything, and the same JSON travels with the document.
     claims: [
       {
         id: 'c-textbook',
         rule: 'Supported iff the pooled random-effects (REML) estimate over the full evidence base is positive AND p < 0.05.',
-        check(A) {
-          const fit = A.overall({ method: 'REML' });
-          if (fit.significant && fit.estimate > 0) {
-            return { verdict: 'supported', reason: `pooled SMD ${fit.estimate}, p = ${fit.p} < 0.05`, evidence: fit };
-          }
-          return {
-            verdict: 'challenged',
-            reason: `pooled SMD ${fit.estimate} [${fit.ci_lower}, ${fit.ci_upper}], p = ${fit.p} — the general claim is not supported across the full evidence base`,
-            evidence: fit,
-          };
+        test: {
+          analysis: 'overall',
+          args: { method: 'REML' },
+          verdicts: [
+            {
+              when: [{ path: 'significant', op: 'eq', value: true }, { path: 'estimate', op: 'gt', value: 0 }],
+              verdict: 'supported',
+              reason: 'pooled SMD {estimate}, p = {p} < 0.05',
+            },
+            {
+              default: true,
+              verdict: 'challenged',
+              reason: 'pooled SMD {estimate} [{ci_lower}, {ci_upper}], p = {p} — the general claim is not supported across the full evidence base',
+            },
+          ],
         },
       },
       {
         id: 'c-overall',
         rule: 'Supported iff the pooled REML estimate has p ≥ 0.05 AND |SMD| < 0.2 (small by Cohen’s convention).',
-        check(A) {
-          const fit = A.overall({ method: 'REML' });
-          if (!fit.significant && Math.abs(fit.estimate) < 0.2) {
-            return { verdict: 'supported', reason: `pooled SMD ${fit.estimate} (|SMD| < 0.2), p = ${fit.p} ≥ 0.05`, evidence: fit };
-          }
-          if (fit.significant) return { verdict: 'challenged', reason: `pooled effect IS significant (p = ${fit.p})`, evidence: fit };
-          return { verdict: 'nuanced', reason: `not significant, but |SMD| = ${Math.abs(fit.estimate)} ≥ 0.2`, evidence: fit };
+        test: {
+          analysis: 'overall',
+          args: {},
+          verdicts: [
+            {
+              when: [{ path: 'significant', op: 'eq', value: false }, { path: 'estimate', op: 'abs_lt', value: 0.2 }],
+              verdict: 'supported',
+              reason: 'pooled SMD {estimate} (|SMD| < 0.2), p = {p} ≥ 0.05',
+            },
+            {
+              when: [{ path: 'significant', op: 'eq', value: true }],
+              verdict: 'challenged',
+              reason: 'pooled effect IS significant (p = {p})',
+            },
+            {
+              default: true,
+              verdict: 'nuanced',
+              reason: 'not significant, but |SMD| ({estimate}) ≥ 0.2',
+            },
+          ],
         },
       },
       {
         id: 'c-moderator',
         rule: 'Supported iff meta-regression on min(weeks, 3) has negative slope, p < 0.05, AND R² ≥ 90% of heterogeneity explained.',
-        check(A) {
-          const fit = A.metareg({ moderator: 'weeks', cap: 3 });
-          const m = fit.moderator;
-          if (m.b < 0 && m.p < 0.05 && fit.R2_percent >= 90) {
-            return { verdict: 'supported', reason: `slope ${m.b} per week (p = ${m.p}), R² = ${fit.R2_percent}% of between-study heterogeneity explained`, evidence: fit };
-          }
-          if (m.b < 0 && m.p < 0.05) {
-            return { verdict: 'nuanced', reason: `slope significant (${m.b}, p = ${m.p}) but explains only ${fit.R2_percent}% of heterogeneity`, evidence: fit };
-          }
-          return { verdict: 'challenged', reason: `moderator not significant (slope ${m.b}, p = ${m.p})`, evidence: fit };
+        test: {
+          analysis: 'metareg',
+          args: { moderator: 'weeks', cap: 3 },
+          verdicts: [
+            {
+              when: [
+                { path: 'moderator.b', op: 'lt', value: 0 },
+                { path: 'moderator.p', op: 'lt', value: 0.05 },
+                { path: 'R2_percent', op: 'ge', value: 90 },
+              ],
+              verdict: 'supported',
+              reason: 'slope {moderator.b} per week (p = {moderator.p}), R² = {R2_percent}% of between-study heterogeneity explained',
+            },
+            {
+              when: [
+                { path: 'moderator.b', op: 'lt', value: 0 },
+                { path: 'moderator.p', op: 'lt', value: 0.05 },
+              ],
+              verdict: 'nuanced',
+              reason: 'slope significant ({moderator.b}, p = {moderator.p}) but explains only {R2_percent}% of heterogeneity',
+            },
+            {
+              default: true,
+              verdict: 'challenged',
+              reason: 'moderator not significant (slope {moderator.b}, p = {moderator.p})',
+            },
+          ],
         },
       },
       {
         id: 'c-window',
         rule: 'Supported iff the subgroup with ≤ 1 week of prior contact has a positive pooled estimate with p < 0.05.',
-        check(A) {
-          const fit = A.subgroup({ split_field: 'weeks', split_at: 1 });
-          const low = fit.groups.find((g) => g.group.includes('≤ 1'));
-          if (low && low.estimate > 0 && low.significant) {
-            return { verdict: 'supported', reason: `≤1-week subgroup (k=${low.k}): SMD ${low.estimate} [${low.ci_lower}, ${low.ci_upper}], p = ${low.p}`, evidence: fit };
-          }
-          return { verdict: 'challenged', reason: low ? `≤1-week subgroup not significantly positive (SMD ${low.estimate}, p = ${low.p})` : 'subgroup not found', evidence: fit };
+        test: {
+          analysis: 'subgroup',
+          args: { split_field: 'weeks', split_at: 1 },
+          focus: { collection: 'groups', match_field: 'group', match_substring: '≤ 1' },
+          verdicts: [
+            {
+              when: [{ path: 'f.estimate', op: 'gt', value: 0 }, { path: 'f.significant', op: 'eq', value: true }],
+              verdict: 'supported',
+              reason: '≤1-week subgroup (k={f.k}): SMD {f.estimate} [{f.ci_lower}, {f.ci_upper}], p = {f.p}',
+            },
+            {
+              default: true,
+              verdict: 'challenged',
+              reason: '≤1-week subgroup not significantly positive (SMD {f.estimate}, p = {f.p})',
+            },
+          ],
         },
       },
       {
         id: 'c-robust',
         rule: 'Supported iff leave-one-out re-fits never flip the significance status of the pooled estimate.',
-        check(A) {
-          const fit = A.loo();
-          if (fit.flips_significance.length === 0) {
-            return { verdict: 'supported', reason: `19 re-fits, estimates ${fit.min_estimate}…${fit.max_estimate}, no significance flips`, evidence: fit };
-          }
-          return { verdict: 'challenged', reason: `omitting ${fit.flips_significance.join(', ')} flips the conclusion`, evidence: fit };
+        test: {
+          analysis: 'loo',
+          args: {},
+          verdicts: [
+            {
+              when: [{ path: 'flips_significance.length', op: 'eq', value: 0 }],
+              verdict: 'supported',
+              reason: '{rows.length} re-fits, estimates {min_estimate}…{max_estimate}, no significance flips',
+            },
+            {
+              default: true,
+              verdict: 'challenged',
+              reason: 'omitting {flips_significance} flips the conclusion',
+            },
+          ],
         },
       },
       {
         id: 'c-bias',
         rule: 'Supported iff Egger’s test p ≥ 0.10; nuanced if 0.05 ≤ p < 0.10 (borderline asymmetry); challenged if p < 0.05.',
-        check(A) {
-          const fit = A.funnel();
-          if (fit.p >= 0.10) return { verdict: 'supported', reason: `Egger’s test p = ${fit.p} — no indication of small-study asymmetry`, evidence: fit };
-          if (fit.p >= 0.05) {
-            return { verdict: 'nuanced', reason: `Egger’s test p = ${fit.p}: not significant at α = 0.05, but borderline — “no signs of publication bias” overstates the confidence this test supports`, evidence: fit };
-          }
-          return { verdict: 'challenged', reason: `Egger’s test p = ${fit.p} < 0.05 — significant small-study asymmetry`, evidence: fit };
+        test: {
+          analysis: 'funnel',
+          args: {},
+          verdicts: [
+            {
+              when: [{ path: 'p', op: 'ge', value: 0.10 }],
+              verdict: 'supported',
+              reason: 'Egger’s test p = {p} — no indication of small-study asymmetry',
+            },
+            {
+              when: [{ path: 'p', op: 'ge', value: 0.05 }],
+              verdict: 'nuanced',
+              reason: 'Egger’s test p = {p}: not significant at α = 0.05, but borderline — “no signs of publication bias” overstates the confidence this test supports',
+            },
+            {
+              default: true,
+              verdict: 'challenged',
+              reason: 'Egger’s test p = {p} < 0.05 — significant small-study asymmetry',
+            },
+          ],
         },
       },
     ],
