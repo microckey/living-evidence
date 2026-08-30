@@ -6,6 +6,7 @@
 import {
   fnv1a, resolvePath, fmtNumber, fmtValue, fmtTemplate, evaluateRules, validateTest, OPS,
 } from '../lib/claim-rules.js';
+import { CLAIMS } from '../data/pygmalion-claims.js';
 
 let failures = 0;
 let count = 0;
@@ -244,7 +245,8 @@ const SHIPPED = {
     verdicts: [
       { when: [{ path: 'moderator.b', op: 'lt', value: 0 }, { path: 'moderator.p', op: 'lt', value: 0.05 }, { path: 'R2_percent', op: 'ge', value: 90 }], verdict: 'supported', reason: 'slope {moderator.b} per week (p = {moderator.p}), R² = {R2_percent}% of between-study heterogeneity explained' },
       { when: [{ path: 'moderator.b', op: 'lt', value: 0 }, { path: 'moderator.p', op: 'lt', value: 0.05 }], verdict: 'nuanced', reason: 'slope significant ({moderator.b}, p = {moderator.p}) but explains only {R2_percent}% of heterogeneity' },
-      { default: true, verdict: 'challenged', reason: 'moderator not significant (slope {moderator.b}, p = {moderator.p})' },
+      { when: [{ path: 'moderator.p', op: 'lt', value: 0.05 }, { path: 'moderator.b', op: 'ge', value: 0 }], verdict: 'challenged', reason: 'slope is statistically significant but nonnegative ({moderator.b}, p = {moderator.p}) — contrary to the claimed negative association' },
+      { default: true, verdict: 'challenged', reason: 'the required negative association was not detected (slope {moderator.b}, p = {moderator.p})' },
     ],
   },
   'c-window': {
@@ -276,6 +278,17 @@ const SHIPPED = {
 };
 
 for (const [id, test] of Object.entries(SHIPPED)) check(`${id} AST is well-formed`, validateTest(test, id) === true);
+
+// The fixtures above are a hand-copy. A copy that drifts from the module silently
+// stops testing the shipped rules, so it is held to the module both pages boot from.
+const MODULE_TESTS = Object.fromEntries(CLAIMS.map((c) => [c.id, c.test]));
+check('the fixtures cover exactly the shipped claim ids',
+  JSON.stringify(Object.keys(SHIPPED)) === JSON.stringify(Object.keys(MODULE_TESTS)), Object.keys(MODULE_TESTS).join(','));
+for (const id of Object.keys(SHIPPED)) {
+  check(`${id} fixture is byte-identical to data/pygmalion-claims.js`,
+    JSON.stringify(SHIPPED[id]) === JSON.stringify(MODULE_TESTS[id]),
+    `module: ${JSON.stringify(MODULE_TESTS[id])}`);
+}
 
 // Fixtures = the real Raudenbush(1985) numbers this document ships with
 // (goldens cross-checked against R metafor in verify/stats.test.mjs).
@@ -317,6 +330,25 @@ const robustBad = evaluateRules(SHIPPED['c-robust'], () => ({ flips_significance
 check('c-robust goes challenged and names the studies', robustBad.verdict === 'challenged' && robustBad.reason === 'omitting s04, s09 flips the conclusion', robustBad.reason);
 const modNuanced = evaluateRules(SHIPPED['c-moderator'], () => ({ R2_percent: 40, moderator: { b: -0.1, p: 0.01 } }), 'c-moderator');
 check('c-moderator goes nuanced when R² is low', modNuanced.verdict === 'nuanced' && /only 40%/.test(modNuanced.reason), modNuanced.reason);
+// A slope that is significant but points the WRONG WAY used to fall through to the
+// default and be reported as "moderator not significant" — a real mislabelling: the
+// association WAS detected, it just contradicted the claim. That branch is now
+// explicit, and this fixture is what proves it fires.
+const modWrongWay = evaluateRules(SHIPPED['c-moderator'], () => ({ R2_percent: 95, moderator: { b: 0.21, p: 0.001 } }), 'c-moderator');
+check('c-moderator: a significant POSITIVE slope is challenged, not "not significant"',
+  modWrongWay.verdict === 'challenged' && /significant but nonnegative/.test(modWrongWay.reason)
+  && !/not significant/.test(modWrongWay.reason) && !/was not detected/.test(modWrongWay.reason),
+  modWrongWay.reason);
+check('c-moderator: the wrong-way reason quotes the slope and its p', modWrongWay.reason.includes('0.21') && modWrongWay.reason.includes('0.001'), modWrongWay.reason);
+// b = 0 exactly is nonnegative too — the branch uses ge, so a significant flat slope
+// lands there rather than in the "not detected" default.
+const modFlatSig = evaluateRules(SHIPPED['c-moderator'], () => ({ R2_percent: 0, moderator: { b: 0, p: 0.02 } }), 'c-moderator');
+check('c-moderator: a significant ZERO slope also hits the nonnegative branch',
+  modFlatSig.verdict === 'challenged' && /significant but nonnegative/.test(modFlatSig.reason), modFlatSig.reason);
+// …and a genuinely null result still reaches the default, with its corrected wording.
+const modNull = evaluateRules(SHIPPED['c-moderator'], () => ({ R2_percent: 3, moderator: { b: -0.02, p: 0.62 } }), 'c-moderator');
+check('c-moderator: a non-significant slope falls to the default "not detected" reason',
+  modNull.verdict === 'challenged' && /the required negative association was not detected/.test(modNull.reason), modNull.reason);
 const windowBad = evaluateRules(SHIPPED['c-window'], () => ({
   groups: [{ group: 'weeks ≤ 1', k: 7, estimate: 0.05, ci_lower: -0.2, ci_upper: 0.3, p: 0.6, significant: false }],
 }), 'c-window');

@@ -130,6 +130,25 @@ try {
   const ov0 = await call('get_document_overview', {});
   check('overview survives an empty evidence base', ov0.evidence_base.k === 0 && ov0.current_overall_fit === null, JSON.stringify(ov0.current_overall_fit));
   check('overview tells the agent how a workspace works', ov0.rules_of_engagement.some((r) => /WORKSPACE/.test(r)), '');
+  // C15: the one thing an agent cannot do here is approve. The workflow has to say
+  // so in order, or an agent waits for a tool that does not exist.
+  check('overview ships an ordered authoring workflow',
+    Array.isArray(ov0.workflow) && ov0.workflow.length >= 5
+    && /^set_hypothesis/.test(ov0.workflow[0]) && /^propose_study/.test(ov0.workflow[1])
+    && /export_document/.test(ov0.workflow.at(-1)),
+    JSON.stringify(ov0.workflow));
+  check('the workflow names the human approval gate and the absence of an approval tool',
+    ov0.workflow.some((s) => /NO agent approval tool/.test(s) && /k changes only after approval/.test(s) && /≥2 approved records/.test(s)),
+    JSON.stringify(ov0.workflow));
+  check('the workflow points at the exemplar as the demo surface',
+    /This page is the authoring surface/.test(ov0.workflow_note || '') && /exemplar page is the fastest cross-examination demo/.test(ov0.workflow_note || ''),
+    String(ov0.workflow_note));
+  check('overview orients the workspace inside the suite',
+    ov0.suite_context.you_are_here === 'workspace' && /index\.html/.test(ov0.suite_context.exemplar) && /atlas\.html/.test(ov0.suite_context.atlas),
+    JSON.stringify(ov0.suite_context));
+  check('overview suggests an authoring flow that ends in export',
+    Array.isArray(ov0.suggested_flow) && /set_hypothesis/.test(ov0.suggested_flow[0]) && /export_document/.test(ov0.suggested_flow.at(-1)),
+    JSON.stringify(ov0.suggested_flow));
   const poolErr = await callErr('run_meta_analysis', {});
   check('analysis on an empty base throws its normal error', /fewer than 2 studies/.test(poolErr || ''), poolErr);
   await page.screenshot({ path: path.join(root, 'verify', '_snap_workspace_fresh.png'), fullPage: true });
@@ -141,7 +160,10 @@ try {
   check('set_hypothesis returns the new text', setH.hypothesis === hyp, JSON.stringify(setH));
   check('hypothesis rendered in the page', (await page.textContent('#le-hypothesis')) === hyp);
   const emptyH = await callErr('set_hypothesis', { text: '   ' });
-  check('empty hypothesis rejected', /missing required field: text/.test(emptyH || ''), emptyH);
+  check('whitespace-only hypothesis rejected as blank, not as missing',
+    /missing required field: text/.test(emptyH || '') && /blank after trimming/.test(emptyH || ''), emptyH);
+  const absentH = await callErr('set_hypothesis', {});
+  check('an absent hypothesis is rejected too', /missing required field: text/.test(absentH || ''), absentH);
   const longH = await callErr('set_hypothesis', { text: 'x'.repeat(501) });
   check('over-long hypothesis rejected', /max 500/.test(longH || ''), longH);
 
@@ -205,6 +227,32 @@ try {
   check('claim id that would break a selector rejected', /not usable/.test(badId || ''), badId);
   const noStatement = await callErr('add_claim', { rule: 'x', test: CLAIM.test });
   check('claim without a statement rejected', /missing required field: statement/.test(noStatement || ''), noStatement);
+
+  // The AST is the one argument that matters, and an agent that has to guess its
+  // shape writes claims that bounce. The schema spells it out, closed at every level.
+  const addSchema = await page.evaluate(() => window.LivingEvidence.tools.find((t) => t.name === 'add_claim').inputSchema);
+  const testSchema = addSchema.properties.test;
+  const verdictItems = testSchema.properties.verdicts.items;
+  check('add_claim declares the full AST rather than a bare object',
+    JSON.stringify(testSchema.properties.analysis.enum) === JSON.stringify(['overall', 'loo', 'subgroup', 'metareg', 'funnel', 'cumulative'])
+    && testSchema.additionalProperties === false && JSON.stringify(testSchema.required) === JSON.stringify(['analysis', 'verdicts']),
+    JSON.stringify(testSchema.properties.analysis));
+  check('the verdicts schema is closed and mirrors validateTest',
+    testSchema.properties.verdicts.minItems === 2
+    && verdictItems.additionalProperties === false
+    && JSON.stringify(verdictItems.properties.verdict.enum) === JSON.stringify(['supported', 'challenged', 'nuanced'])
+    && JSON.stringify(verdictItems.properties.when.items.properties.op.enum) === JSON.stringify(['lt', 'le', 'gt', 'ge', 'eq', 'ne', 'abs_lt', 'abs_ge'])
+    && verdictItems.properties.when.items.additionalProperties === false
+    && JSON.stringify(verdictItems.properties.when.items.required) === JSON.stringify(['path', 'op', 'value']),
+    JSON.stringify(verdictItems));
+  check('the focus selector is declared and closed',
+    JSON.stringify(testSchema.properties.focus.required) === JSON.stringify(['collection', 'match_field', 'match_substring'])
+    && testSchema.properties.focus.additionalProperties === false,
+    JSON.stringify(testSchema.properties.focus));
+  check('add_claim points at list_claims as the template source',
+    /copy an existing claim's machine_check from list_claims as a template/i.test(
+      (await page.evaluate(() => window.LivingEvidence.tools.find((t) => t.name === 'add_claim').description)),
+    ));
 
   const added = await call('add_claim', CLAIM);
   check('claim registered with its id', added.claim_id === CLAIM.id, JSON.stringify(added));
@@ -292,10 +340,35 @@ try {
 
   // ------------------------------------------------------------- 6. export
   console.log('\n# 6 — export a self-contained document');
-  const exported = await page.evaluate(async () => {
+  // The DEFAULT response is a receipt, not the file: megabytes of HTML in a tool
+  // result burns the agent's context for a payload the human already has as a
+  // download. The file itself has to be asked for.
+  const exportedDefault = await page.evaluate(async () => {
     const r = await window.LivingEvidence.invokeTool('export_document', {}, { actor: 'human' });
-    return { filename: r.filename, bytes: r.bytes, html: r.html };
+    return {
+      keys: Object.keys(r), filename: r.filename, bytes: r.bytes,
+      download_started: r.download_started, content_digest: r.content_digest, has_html: 'html' in r,
+    };
   });
+  check('the default export response does NOT carry the html', exportedDefault.has_html === false, exportedDefault.keys.join(','));
+  check('the default export response says the download started',
+    exportedDefault.download_started === true, JSON.stringify(exportedDefault.download_started));
+  check('the default export response carries a content digest',
+    /^[0-9a-f]{8}$/.test(exportedDefault.content_digest || ''), String(exportedDefault.content_digest));
+  check('the default export response still reports filename and size',
+    /^living-evidence-export-\d{8}-\d{4}\.html$/.test(exportedDefault.filename) && exportedDefault.bytes > 50000,
+    `${exportedDefault.filename} / ${exportedDefault.bytes}`);
+
+  const exported = await page.evaluate(async () => {
+    const r = await window.LivingEvidence.invokeTool('export_document', { include_html: true }, { actor: 'human' });
+    return { filename: r.filename, bytes: r.bytes, html: r.html, content_digest: r.content_digest };
+  });
+  check('include_html:true adds the html to the same response', typeof exported.html === 'string' && exported.html.length > 50000, String(typeof exported.html));
+  // Same document either way — only the export timestamp inside it differs, and that
+  // string has a fixed length, so the byte count must match exactly.
+  check('include_html returns the same document the default call digested',
+    exported.bytes === exportedDefault.bytes && /^[0-9a-f]{8}$/.test(exported.content_digest || ''),
+    `${exported.bytes} vs ${exportedDefault.bytes}`);
   check('export filename is timestamped', /^living-evidence-export-\d{8}-\d{4}\.html$/.test(exported.filename), exported.filename);
   check('export is a substantial single file', exported.bytes > 50000, String(exported.bytes));
   check('export inlines the engine (no module imports left)', !/^import\s/m.test(exported.html), '');

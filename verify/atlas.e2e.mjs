@@ -106,16 +106,19 @@ try {
   // ======================================================================= 1
   console.log('\n# 1. boot: tools, status, graph');
   const tools = await page.evaluate(() => window.LivingEvidenceAtlas.tools.map((t) => t.name));
-  check('8 tools exposed', tools.length === 8, tools.join(','));
-  check('the expected 8 tools',
-    JSON.stringify(tools) === JSON.stringify(['atlas_overview', 'get_cell', 'list_claims', 'evaluate_claim', 'get_gaps', 'get_study_brief', 'focus_node', 'synthesize']),
+  check('10 tools exposed', tools.length === 10, tools.join(','));
+  check('the expected 10 tools',
+    JSON.stringify(tools) === JSON.stringify(['atlas_overview', 'get_cell', 'list_claims', 'evaluate_claim', 'get_gaps', 'get_study_brief', 'focus_node', 'synthesize', 'list_nodes', 'get_audit_log']),
     tools.join(','));
+  const readOnlyNames = await page.evaluate(() => window.LivingEvidenceAtlas.tools.filter((t) => t.readOnly).map((t) => t.name));
+  check('the two new tools are declared read-only',
+    readOnlyNames.includes('list_nodes') && readOnlyNames.includes('get_audit_log'), readOnlyNames.join(','));
   check('every schema is closed (additionalProperties: false)',
     await page.evaluate(() => window.LivingEvidenceAtlas.tools.every((t) => t.inputSchema.additionalProperties === false)));
   const agentStatus = await page.evaluate(() => window.LivingEvidenceAtlas.state.agent);
   check('WebMCP absent in the test browser, handled gracefully', agentStatus.active === false, JSON.stringify(agentStatus));
   check('registration status is explicitly "absent" (not a silent false)', agentStatus.status === 'absent', JSON.stringify(agentStatus));
-  check('absent status reports 0/8 registered', agentStatus.registered === 0 && agentStatus.total === 8, JSON.stringify(agentStatus));
+  check('absent status reports 0/10 registered', agentStatus.registered === 0 && agentStatus.total === 10, JSON.stringify(agentStatus));
   check('status banner explains the fallback', /Tool console/.test(await page.textContent('#atlas-status')));
   // 2 constructs + 1 cell + 6 claims + 19 records + 3 gaps + 1 document + 1 moderator
   const nodeCount = await page.locator('#atlas-map [data-node]').count();
@@ -155,12 +158,40 @@ try {
     JSON.stringify(coverage.observed_values));
   check('no record sits inside the computed band', coverage.records_in_band === 0, String(coverage.records_in_band));
   check('coverage gap carries its collection frame', /not-searched/.test(coverage.collection_frame), coverage.collection_frame);
+  // The statement now enumerates the observed values and states the model's ONE
+  // prediction for the whole band, instead of implying the band has its own.
+  check('the coverage statement lists the observed weeks and the empty band',
+    coverage.statement.startsWith(`Observed weeks are ${expected.observed.join(', ')};`)
+    && coverage.statement.includes(`none fall in ${expected.empty_band[0]}–${expected.empty_band[1]}`),
+    coverage.statement);
+  check('the coverage gap is ranked as coverage, with no confidence ranking claimed',
+    /raw-moderator coverage gap/.test(coverage.ranked_by) && /no confidence or priority ranking is inferred/.test(coverage.ranked_by)
+    && /no distinct fitted prediction under the current model/.test(coverage.ranked_by),
+    coverage.ranked_by);
   const replication = gapsRes.gaps.find((g) => g.id === 'gap:replication');
-  check('replication gap is 0 of 19', replication.count_with_prereg === 0 && replication.total_records === 19, JSON.stringify(replication));
+  // "0 of 19" was a measurement the record schema cannot make: null + not_collected.
+  check('replication gap reports preregistration as NOT COLLECTED, not as zero',
+    replication.count_with_prereg === null && replication.assessment_status === 'not_collected' && replication.total_records === 19,
+    JSON.stringify(replication));
+  check('replication gap title and statement say "unknown", not "none"',
+    /preregistration linkage unknown/i.test(replication.title)
+    && /Preregistration linkage was not assessed/.test(replication.statement)
+    && /No inference about the existence of preregistered replications is available/.test(replication.statement),
+    `${replication.title} — ${replication.statement}`);
+  check('the replication card on the map says unknown too',
+    /Preregistration linkage unknown/.test(await page.textContent('#atlas-map [data-node="gap:replication"]')),
+    await page.textContent('#atlas-map [data-node="gap:replication"]'));
   check('replication gap does not overclaim', /not evidence that no pre-registered replication/.test(replication.honest_framing), replication.honest_framing);
   const verification = gapsRes.gaps.find((g) => g.id === 'gap:verification');
   check('verification gap is 0 of 19', verification.count_with_manifest === 0 && verification.total_records === 19, JSON.stringify(verification));
   check('verification gap points at the record ladder', /R2/.test(verification.statement) && /unassigned in v0\.1/.test(verification.honest_framing), verification.statement);
+  check('verification statement names all three missing artefacts and hedges the rung',
+    /per-record source quote, approval event, or data manifest/.test(verification.statement)
+    && /if R2 requires a manifest, no record can currently be certified as R2 or higher/.test(verification.statement),
+    verification.statement);
+  check('the card defines R2 in one clause', /R2 = recomputable from an attached data manifest/.test(verification.honest_framing), verification.honest_framing);
+  check('get_gaps says the numbers depend on authored definitions, not just the data',
+    /computed from the current records under authored gap definitions and model specifications/.test(gapsRes.note), gapsRes.note);
   check('the map shows the computed band, not a literal', /8–16 weeks/.test(await page.textContent('#atlas-map [data-node="gap:coverage-weeks"]')));
 
   // ======================================================================= 3
@@ -226,6 +257,8 @@ try {
     listed.claims.every((c) => c.machine_check && Array.isArray(c.machine_check.verdicts) && c.machine_check.verdicts.at(-1).default === true));
   check('claims carry the statement from the module (no prose to scrape here)',
     listed.claims.every((c, i) => c.statement === CLAIMS[i].statement), JSON.stringify(listed.claims.map((c) => c.statement.slice(0, 20))));
+  check('list_claims states what a verdict is scoped to',
+    listed.verdict_scope === 'authored statistical rule only — not an independent judgment of truth, validity, or bias', String(listed.verdict_scope));
   for (const [id, want] of Object.entries(EXPECTED_VERDICTS)) {
     const r = await call('evaluate_claim', { claim_id: id });
     check(`claim ${id} ${want}`, r.verdict === want, `${r.verdict} — ${r.reason}`);
@@ -253,6 +286,13 @@ try {
   check('the last claim node is the selected one', await page.locator('[data-node="claim:c-bias"].atlas-selected').count() === 1);
   const unknownClaim = await callErr('evaluate_claim', { claim_id: 'nope' });
   check('unknown claim id errors helpfully', /list_claims/.test(unknownClaim || ''), unknownClaim);
+  // C21: the map calls it claim:c-window, list_claims calls it c-window. Both address it.
+  const nodeFormClaim = await call('evaluate_claim', { claim_id: 'claim:c-window' });
+  check('evaluate_claim accepts the node form claim:c-window',
+    nodeFormClaim.claim_id === 'c-window' && nodeFormClaim.node_id === 'claim:c-window' && nodeFormClaim.verdict === 'supported',
+    JSON.stringify({ id: nodeFormClaim.claim_id, node: nodeFormClaim.node_id, v: nodeFormClaim.verdict }));
+  check('the verdict response scopes itself', nodeFormClaim.verdict_scope === listed.verdict_scope, String(nodeFormClaim.verdict_scope));
+  await call('evaluate_claim', { claim_id: 'c-bias' }); // restore the demo state block 4 left behind
 
   // ======================================================================= 5
   console.log('\n# 5. focus_node — the shared surface');
@@ -271,6 +311,35 @@ try {
   check('focus_node is ledgered as navigation', focusEntry.kind === 'navigation' && focusEntry.inputs.node_id === 'rec:s10', JSON.stringify(focusEntry));
   const badNode = await callErr('focus_node', { node_id: 'rec:nope' });
   check('an unknown node id errors helpfully', /unknown node id/.test(badNode || '') && /atlas_overview/.test(badNode || ''), badNode);
+  // C21: an agent reading get_cell or list_nodes sees record ids like "s10". Making
+  // it learn the map's "rec:" prefix before it can point at anything is a trap.
+  const bareFocus = await call('focus_node', { node_id: 's10' });
+  check('focus_node accepts the bare record id and canonicalises it',
+    bareFocus.node_id === 'rec:s10' && bareFocus.bare_id === 's10' && bareFocus.requested_id === 's10'
+    && bareFocus.type === 'record' && bareFocus.detail.record_id === 's10',
+    JSON.stringify({ n: bareFocus.node_id, b: bareFocus.bare_id, r: bareFocus.requested_id }));
+  check('the bare id selects the same node the prefixed id does',
+    await page.locator('[data-node="rec:s10"].atlas-selected').count() === 1
+    && await page.locator('.atlas-selected').count() === 1);
+  const prefixedFocus = await call('focus_node', { node_id: 'rec:s10' });
+  check('both id forms return the same node detail',
+    prefixedFocus.node_id === bareFocus.node_id && JSON.stringify(prefixedFocus.detail) === JSON.stringify(bareFocus.detail),
+    `${prefixedFocus.node_id} vs ${bareFocus.node_id}`);
+  const bareClaimFocus = await call('focus_node', { node_id: 'c-window' });
+  check('a bare claim id resolves to its claim node', bareClaimFocus.node_id === 'claim:c-window' && bareClaimFocus.type === 'claim', bareClaimFocus.node_id);
+  const bareGapFocus = await call('focus_node', { node_id: 'coverage-weeks' });
+  check('a bare gap id resolves to its gap node', bareGapFocus.node_id === 'gap:coverage-weeks' && bareGapFocus.type === 'gap', bareGapFocus.node_id);
+  const bareModFocus = await call('focus_node', { node_id: 'weeks' });
+  check('a bare moderator id resolves to mod:weeks', bareModFocus.node_id === 'mod:weeks' && bareModFocus.type === 'moderator', bareModFocus.node_id);
+  const bareSynth = await call('synthesize', { exclude: ['s04'] });
+  const prefixedSynth = await call('synthesize', { exclude: ['rec:s04'] });
+  check('synthesize takes bare or prefixed record ids and reports both forms',
+    bareSynth.estimate === prefixedSynth.estimate && bareSynth.k === 18
+    && JSON.stringify(prefixedSynth.excluded) === JSON.stringify(['s04'])
+    && JSON.stringify(prefixedSynth.excluded_node_ids) === JSON.stringify(['rec:s04']),
+    JSON.stringify({ e: prefixedSynth.excluded, n: prefixedSynth.excluded_node_ids }));
+  await call('synthesize', {}); // back to the canonical full-sample fit
+  await call('focus_node', { node_id: 'rec:s10' }); // …and back to the record block 5 is about
 
   // ======================================================================= 6
   console.log('\n# 6. study brief — filled inputs, named unknowns, NO sample size');
@@ -279,13 +348,29 @@ try {
   check('brief names at least 6 unresolved inputs', brief.unresolved_inputs.length >= 6, String(brief.unresolved_inputs.length));
   check('every unresolved input says why it is unresolved',
     brief.unresolved_inputs.every((u) => typeof u.name === 'string' && typeof u.why === 'string' && u.why.length > 20));
-  check('the design implication is equivalence/precision, not superiority',
-    /equivalence/.test(brief.filled_by_atlas.design_implication) && /superiority test is the wrong shape/.test(brief.filled_by_atlas.design_implication),
+  check('the brief is marked available', brief.available === true, JSON.stringify(brief.available));
+  // The Atlas states what each test shape answers and refuses to pick one — and it
+  // quotes the model's prediction for the band rather than leaving "≈ 0" implicit.
+  check('the design implication refuses to choose the test but names both shapes',
+    /The Atlas cannot choose the test/.test(brief.filled_by_atlas.design_implication)
+    && /equivalence analysis/.test(brief.filled_by_atlas.design_implication)
+    && /a superiority test answers that different question/.test(brief.filled_by_atlas.design_implication)
+    && /define a margin δ/.test(brief.filled_by_atlas.design_implication),
     brief.filled_by_atlas.design_implication);
-  check('both current estimates are labelled selection-biased optimistic bounds',
+  check('neither current estimate is offered as a bound or a planning value',
     brief.filled_by_atlas.current_estimates.length === 2
-    && brief.filled_by_atlas.current_estimates.every((e) => /selection-biased optimistic bound/.test(e.interpretation)),
+    && brief.filled_by_atlas.current_estimates.every((e) => /justified planning value/.test(e.interpretation))
+    && /neither a bound nor a justified planning value/.test(brief.filled_by_atlas.current_estimates[0].interpretation)
+    && /not independent validation and not a justified planning value/.test(brief.filled_by_atlas.current_estimates[1].interpretation)
+    && /post-hoc subgroup estimate/.test(brief.filled_by_atlas.current_estimates[1].interpretation)
+    && !JSON.stringify(brief.filled_by_atlas.current_estimates).includes('optimistic bound'),
     JSON.stringify(brief.filled_by_atlas.current_estimates.map((e) => e.interpretation)));
+  check('unresolved inputs are missing from THIS Atlas, not declared non-existent',
+    !/do not exist/.test(JSON.stringify(brief.unresolved_inputs) + brief.explicit_note)
+    && brief.unresolved_inputs.some((u) => /may lose pupils/.test(u.why))
+    && brief.unresolved_inputs.some((u) => /remains informative but exploratory/.test(u.why))
+    && /not present in this Atlas or its corpus/.test(brief.explicit_note),
+    brief.explicit_note);
   // The numbers a brief quotes are the load-bearing part of it — a study gets designed
   // against them. Both are refitted here in node and demanded equal to 1e-9, so a
   // brief that quoted the pooled fit for its subgroup row (or any other mix-up) is red.
@@ -316,7 +401,18 @@ try {
   check('zero-crossing equals the node-side capped meta-regression crossing (-intercept/slope)',
     zero === nodeZero, `page ${zero} vs node ${nodeZero}`);
   check('zero-crossing computed from the live capped-linear fit is ~2.6', zero >= 2.4 && zero <= 2.8, String(zero));
-  check('the brief quotes that same computed crossing', brief.filled_by_atlas.rationale.includes(String(zero)), brief.filled_by_atlas.rationale);
+  check('the coverage statement quotes that same computed crossing', coverage.statement.includes(String(zero)), coverage.statement);
+  // The band's single fitted prediction: under x = min(weeks, 3) every raw value ≥ 3
+  // shares one predicted SMD, so it is quoted rather than described as "≈ 0".
+  const nodePred3 = Math.round((nodeReg.intercept.b + 3 * nodeReg.moderator.b) * 1e4) / 1e4;
+  check('the prediction at x = 3 equals the node-side capped fit (intercept + 3·slope)',
+    coverage.model.predicted_smd_at_x3 === nodePred3, `page ${coverage.model.predicted_smd_at_x3} vs node ${nodePred3}`);
+  check('the coverage statement quotes that prediction for every raw value ≥ 3',
+    coverage.statement.includes(`predicts approximately SMD ${nodePred3} for every raw value ≥ 3`), coverage.statement);
+  check('the brief rationale is about model criticism, not effect-hunting',
+    /pre-registered study in this band would add raw-week coverage/.test(brief.filled_by_atlas.rationale)
+    && /prespecified uncapped or nonlinear alternatives/.test(brief.filled_by_atlas.rationale),
+    brief.filled_by_atlas.rationale);
   // the honesty assertion: no numeric sample size anywhere except the explicit note
   const briefWithoutNote = { ...brief, explicit_note: undefined };
   const briefJson = JSON.stringify(briefWithoutNote);
@@ -334,15 +430,21 @@ try {
   const briefEntry = (await audit()).at(-1);
   check('the brief is ledgered', briefEntry.kind === 'brief' && /no sample size/.test(briefEntry.summary), JSON.stringify(briefEntry));
   const noBrief = await call('get_study_brief', { gap_id: 'gap:replication' });
-  check('other gap types return the short no-brief object',
-    noBrief.brief === null && noBrief.reason === 'no brief for this gap type in M2-lite', JSON.stringify(noBrief));
+  check('other gap types return the short no-brief object, not an error',
+    noBrief.available === false && noBrief.brief === null && noBrief.reason === 'no brief for this gap type in M2-lite', JSON.stringify(noBrief));
+  const briefSchema = await page.evaluate(() => window.LivingEvidenceAtlas.tools.find((t) => t.name === 'get_study_brief'));
+  check('the brief tool is titled as a prospective study-design brief', briefSchema.title === 'Prospective study-design brief', briefSchema.title);
+  check('the gap_id schema enumerates the three computed gaps and names the one that compiles',
+    JSON.stringify(briefSchema.inputSchema.properties.gap_id.enum) === JSON.stringify(['gap:coverage-weeks', 'gap:replication', 'gap:verification'])
+    && /brief_available:true/.test(briefSchema.inputSchema.properties.gap_id.description),
+    JSON.stringify(briefSchema.inputSchema.properties.gap_id));
   const badGap = await callErr('get_study_brief', { gap_id: 'gap:nope' });
   check('an unknown gap id errors helpfully', /unknown gap id/.test(badGap || '') && /get_gaps/.test(badGap || ''), badGap);
 
   // ======================================================================= 7
   console.log('\n# 7. the human tool console');
   await page.click('details:has(#atlas-console) > summary');
-  check('console lists all 8 tools', await page.locator('#atlas-console select option').count() === 8);
+  check('console lists all 10 tools', await page.locator('#atlas-console select option').count() === 10);
   await page.selectOption('#atlas-console select', 'evaluate_claim');
   await page.fill('#atlas-console textarea', JSON.stringify({ claim_id: 'c-window' }));
   await page.click('#atlas-console .le-btn');
@@ -364,11 +466,31 @@ try {
   await call('get_cell', {});
   await call('list_claims', {});
   await call('get_gaps', {});
-  check('the four read tools ledger nothing', (await audit()).length === auditBefore && (await ledgerRows()) === rowsBefore,
+  await call('list_nodes', {});
+  await call('get_audit_log', {});
+  check('all six read tools ledger nothing', (await audit()).length === auditBefore && (await ledgerRows()) === rowsBefore,
     `${auditBefore} → ${(await audit()).length}`);
   const ov = await call('atlas_overview', {});
   check('overview reports the graph size', ov.graph.nodes === 33 && ov.graph.edges === 37, JSON.stringify(ov.graph));
-  check('overview states it is read-only', ov.honesty.some((s) => /READ-ONLY/.test(s)), JSON.stringify(ov.honesty));
+  // "READ-ONLY" was false about the page: focus_node, synthesize, evaluate_claim and
+  // get_study_brief all change what is on screen. What is immutable is the EVIDENCE.
+  check('overview claims evidence-immutability, not read-only-ness',
+    ov.honesty.some((s) => /EVIDENCE-IMMUTABLE: no tool adds, removes, or persists records, edges, or claims/.test(s)
+      && /change ephemeral page\/UI state and append session-ledger entries/.test(s)
+      && /nothing propagates to the exemplar or workspace pages/.test(s))
+    && !ov.honesty.some((s) => /READ-ONLY/.test(s)),
+    JSON.stringify(ov.honesty));
+  check('overview scopes what a verdict is', ov.verdict_scope === 'authored statistical rule only — not an independent judgment of truth, validity, or bias'
+    && ov.honesty.some((s) => /authored statistical rule only/.test(s)), String(ov.verdict_scope));
+  check('overview invites external checks instead of forbidding arithmetic',
+    ov.honesty.some((s) => /Use tool results when reporting page state/.test(s) && /label them external/.test(s)
+      && /not the data or model assumptions/.test(s))
+    && !ov.honesty.some((s) => /Never recompute/.test(s)),
+    JSON.stringify(ov.honesty));
+  check('overview places this page in the suite and suggests a flow',
+    ov.suite_context.you_are_here === 'atlas' && /index\.html/.test(ov.suite_context.exemplar) && /workspace\.html/.test(ov.suite_context.workspace)
+    && Array.isArray(ov.suggested_flow) && ov.suggested_flow.length >= 4 && /list_nodes/.test(ov.suggested_flow.join(' ')),
+    JSON.stringify(ov.suggested_flow));
   check('overview states there is no numeric power output', ov.honesty.some((s) => /no numeric power or sample size/.test(s)));
   check('overview states the single-literature demo scale', ov.honesty.some((s) => /Demo scale: ONE literature/.test(s)));
   check('overview flags the candidate moderator', ov.honesty.some((s) => /CANDIDATE/.test(s)));
@@ -386,6 +508,57 @@ try {
   check('get_cell attaches all 6 claims with their verdicts',
     cell.claims_attached.length === 6 && cell.claims_attached.every((c) => c.verdict !== 'untested'), JSON.stringify(cell.claims_attached));
   check('get_cell refuses an unknown cell id', /unknown cell id/.test(await callErr('get_cell', { cell_id: 'cell:nope' }) || ''));
+  // C27: "causal" is the estimand, and the note says what that rests on.
+  check('get_cell keeps relation_type causal and explains what it depends on',
+    cell.relation_type === 'causal'
+    && /contrast of assigned expectancy induction vs no induction/.test(cell.relation_type_note)
+    && /randomization, clustering, attrition and outcome-measurement assumptions/.test(cell.relation_type_note),
+    `${cell.relation_type} — ${cell.relation_type_note}`);
+  check('the effect scale states the SMD direction convention',
+    /positive = higher measured IQ in the expectancy group than control/.test(cell.effect_scale), cell.effect_scale);
+  const cellSchema = await page.evaluate(() => window.LivingEvidenceAtlas.tools.find((t) => t.name === 'get_cell').inputSchema);
+  check('the get_cell schema pins cell_id to the one cell that exists',
+    cellSchema.properties.cell_id.const === 'cell:teacher-expectancy-iq', JSON.stringify(cellSchema.properties.cell_id));
+
+  // ---------------------------------------------------------------- 8b
+  console.log('\n# 8b. list_nodes — the id directory, and get_audit_log');
+  const listNodes = await call('list_nodes', {});
+  check('list_nodes counts match the rendered graph',
+    listNodes.counts.total === 33 && listNodes.counts.record === 19 && listNodes.counts.claim === 6 && listNodes.counts.gap === 3,
+    JSON.stringify(listNodes.counts));
+  const recordIds = listNodes.nodes.record.map((r) => r.record_id);
+  check('list_nodes returns all 19 record ids, in the dataset\'s own ids',
+    recordIds.length === 19 && DATASET.studies.every((s) => recordIds.includes(s.id)),
+    recordIds.join(','));
+  check('every record entry carries both id forms plus its numbers',
+    listNodes.nodes.record.every((r) => r.node_id === `rec:${r.record_id}`
+      && typeof r.author === 'string' && Number.isFinite(r.year) && Number.isFinite(r.weeks)
+      && Number.isFinite(r.yi) && Number.isFinite(r.vi)),
+    JSON.stringify(listNodes.nodes.record[0]));
+  const s10Row = listNodes.nodes.record.find((r) => r.record_id === 's10');
+  const s10Data = DATASET.studies.find((s) => s.id === 's10');
+  check('s10\'s row matches the dataset record field for field',
+    s10Row.author === s10Data.author && s10Row.year === s10Data.year && s10Row.weeks === s10Data.weeks
+    && s10Row.yi === s10Data.yi && s10Row.vi === s10Data.vi,
+    JSON.stringify(s10Row));
+  check('every other node type is listed with a label',
+    ['cell', 'construct', 'document', 'claim', 'gap', 'moderator'].every((t) => Array.isArray(listNodes.nodes[t])
+      && listNodes.nodes[t].every((n) => typeof n.node_id === 'string' && typeof n.label === 'string' && n.label.length > 2)),
+    Object.keys(listNodes.nodes).join(','));
+  check('the claim node ids are the map\'s claim ids',
+    JSON.stringify(listNodes.nodes.claim.map((c) => c.node_id)) === JSON.stringify(CLAIMS.map((c) => `claim:${c.id}`)),
+    JSON.stringify(listNodes.nodes.claim.map((c) => c.node_id)));
+  const logTool = await call('get_audit_log', {});
+  const pageAudit = await audit();
+  check('get_audit_log returns the same ledger the page holds, in the same order',
+    logTool.entries.length === pageAudit.length && logTool.entries.every((e, i) => e.run === pageAudit[i].run && e.tool === pageAudit[i].tool),
+    `${logTool.entries.length} vs ${pageAudit.length}`);
+  check('get_audit_log entries carry the M1 envelope',
+    logTool.entries.every((e) => REQUIRED_KEYS.every((k) => k in e)) && logTool.entries[0].actor === 'system',
+    JSON.stringify(logTool.entries[0]));
+  const auditDesc = await page.evaluate(() => window.LivingEvidenceAtlas.tools.find((t) => t.name === 'get_audit_log').description);
+  check('get_audit_log calls the digest a checksum, not tamper evidence',
+    /non-cryptographic FNV-1a checksum/.test(auditDesc) && /not tamper evidence/.test(auditDesc) && /session-local/.test(auditDesc), auditDesc);
 
   // ======================================================================= 9
   console.log('\n# 9. keyboard: WebMCP is not accessibility');

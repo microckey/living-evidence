@@ -44,6 +44,47 @@ try {
   for (const t of ['get_document_overview', 'evaluate_claim', 'propose_study', 'get_audit_log']) {
     check(`tool present: ${t}`, tools.includes(t));
   }
+  // -- the descriptions ARE the agent-facing contract: what a tool claims about
+  // itself is the only thing an agent has before it calls. These five carried
+  // overclaims (bias verdicts, time travel, FE tau2 = 0, tamper-proof digests).
+  const toolMeta = await page.evaluate(() => Object.fromEntries(
+    window.LivingEvidence.tools.map((t) => [t.name, { title: t.title, description: t.description }]),
+  ));
+  check('funnel_check is titled and described as small-study asymmetry',
+    toolMeta.funnel_check.title === 'Small-study asymmetry check'
+    && /Asymmetry can have causes other than publication bias/.test(toolMeta.funnel_check.description)
+    && /not evidence of absence of bias/.test(toolMeta.funnel_check.description),
+    JSON.stringify(toolMeta.funnel_check));
+  check('cumulative_meta admits it is retrospective over the current corpus',
+    /Retrospective/.test(toolMeta.cumulative_meta.description)
+    && /does not reconstruct which evidence was actually available/.test(toolMeta.cumulative_meta.description),
+    toolMeta.cumulative_meta.description);
+  check('leave_one_out says it checks significance-status stability only',
+    /status flips only/.test(toolMeta.leave_one_out.description) && /not stability of magnitude/.test(toolMeta.leave_one_out.description),
+    toolMeta.leave_one_out.description);
+  check('run_meta_analysis explains that FE tau2 is null by assumption',
+    /FE assumes one common effect; tau2 is null by model assumption, not estimated as zero/.test(toolMeta.run_meta_analysis.description)
+    && /two-sided test of the pooled effect against zero/.test(toolMeta.run_meta_analysis.description),
+    toolMeta.run_meta_analysis.description);
+  check('get_audit_log calls the digest a checksum, not tamper evidence',
+    /non-cryptographic FNV-1a checksum/.test(toolMeta.get_audit_log.description)
+    && /not tamper evidence/.test(toolMeta.get_audit_log.description)
+    && /session-local/.test(toolMeta.get_audit_log.description),
+    toolMeta.get_audit_log.description);
+
+  const proposeSchema = await page.evaluate(() => window.LivingEvidence.tools.find((t) => t.name === 'propose_study').inputSchema);
+  check('propose_study declares the bounds its handler enforces',
+    proposeSchema.properties.year.type === 'integer' && proposeSchema.properties.year.minimum === 1900 && proposeSchema.properties.year.maximum === 2100
+    && proposeSchema.properties.vi.exclusiveMinimum === 0 && proposeSchema.properties.weeks.minimum === 0
+    && proposeSchema.properties.n1i.type === 'integer' && proposeSchema.properties.n1i.minimum === 1
+    && proposeSchema.properties.source.minLength === 1 && proposeSchema.properties.quote.minLength === 1,
+    JSON.stringify(proposeSchema.properties));
+  check('propose_study documents the SMD direction and the optional derivation',
+    /positive = higher measured IQ in the expectancy group than control/.test(proposeSchema.properties.yi.description)
+    && /how yi\/vi were derived when not directly reported/.test(proposeSchema.properties.derivation.description)
+    && /expectancy-group sample size/.test(proposeSchema.properties.n1i.description),
+    JSON.stringify(proposeSchema.properties.yi));
+
   const agentStatus = await page.evaluate(() => window.LivingEvidence.state.agent);
   check('WebMCP absent in test browser handled gracefully', agentStatus.active === false, JSON.stringify(agentStatus));
   check('registration status is explicitly "absent" (not a silent false)', agentStatus.status === 'absent', JSON.stringify(agentStatus));
@@ -61,12 +102,35 @@ try {
   check('overview k=19', ov.evidence_base.k === 19);
   check('overview starts at evidence version 1', ov.evidence_base.evidence_version === 1, String(ov.evidence_base.evidence_version));
   check('overview 6 claims, all untested', ov.claims.length === 6 && ov.claims.every((c) => c.status === 'untested'), JSON.stringify(ov.claims.map((c) => c.status)));
-  check('overview states the format rule', ov.rules_of_engagement.some((r) => r.includes('call tools')), '');
+  // The old wording forbade the agent to do arithmetic at all ("never recompute").
+  // The contract now is narrower and honest: report the page's numbers as the page's,
+  // and label your own as external rather than substituting them.
+  check('overview invites external checks instead of forbidding arithmetic',
+    ov.rules_of_engagement.some((r) => /Use tool results when reporting page state/.test(r) && /label them external/.test(r))
+    && !ov.rules_of_engagement.some((r) => /Never recompute/.test(r)),
+    JSON.stringify(ov.rules_of_engagement));
+  check('overview scopes what metafor validation proves',
+    ov.rules_of_engagement.some((r) => /numerical reproduction against the reference implementation, not the data or model assumptions/.test(r)),
+    JSON.stringify(ov.rules_of_engagement));
   check('overview states which calls are ledgered', ov.rules_of_engagement.some((r) => /pure reads .* are not/.test(r)), JSON.stringify(ov.rules_of_engagement));
+  // C1: a badge is the output of one authored rule, and the response says so.
+  check('overview carries the verdict scope',
+    ov.verdict_scope === 'authored statistical rule only — not an independent judgment of truth, validity, or bias'
+    && ov.rules_of_engagement.some((r) => /authored statistical rule only/.test(r)), String(ov.verdict_scope));
+  check('overview orients the agent inside the suite',
+    ov.suite_context.you_are_here === 'exemplar' && /workspace\.html/.test(ov.suite_context.workspace) && /atlas\.html/.test(ov.suite_context.atlas),
+    JSON.stringify(ov.suite_context));
+  check('overview suggests a five-minute flow of real tool calls',
+    Array.isArray(ov.suggested_flow) && ov.suggested_flow.length >= 4 && ov.suggested_flow.length <= 6
+    && /c-textbook/.test(ov.suggested_flow.join(' ')) && /funnel_check/.test(ov.suggested_flow.join(' ')),
+    JSON.stringify(ov.suggested_flow));
+  check('a finished document offers no authoring workflow', ov.workflow === undefined, JSON.stringify(ov.workflow));
 
   // -- claims are DATA: list_claims exposes the machine-checkable AST --
   const cl = await call('list_claims', {});
   check('list_claims returns 6 claims', cl.claims.length === 6);
+  check('list_claims states what a verdict is scoped to',
+    cl.verdict_scope === 'authored statistical rule only — not an independent judgment of truth, validity, or bias', String(cl.verdict_scope));
   check('every claim ships its rule AST', cl.claims.every((c) => c.machine_check && Array.isArray(c.machine_check.verdicts) && c.machine_check.verdicts.length >= 2),
     JSON.stringify(cl.claims.map((c) => c.id)));
   check('every AST ends in a default verdict', cl.claims.every((c) => c.machine_check.verdicts.at(-1).default === true));
@@ -137,6 +201,7 @@ try {
     c1.stale === false && c1.evaluated_version === 1 && c1.evidence_version === 1 && c1.status === c1.verdict,
     JSON.stringify({ stale: c1.stale, ev: c1.evaluated_version, cur: c1.evidence_version, status: c1.status }));
   check('verdict reason is rendered from the AST template', /^pooled SMD 0\.0837 \[/.test(c1.reason), c1.reason);
+  check('the verdict response scopes itself', c1.verdict_scope === cl.verdict_scope, String(c1.verdict_scope));
   check('challenged chip in prose', await page.locator('[data-claim="c-textbook"] .le-chip-challenged').count() === 1);
   const c2 = await call('evaluate_claim', { claim_id: 'c-bias' });
   check('bias claim NUANCED (Egger borderline)', c2.verdict === 'nuanced', JSON.stringify(c2.reason));
@@ -157,6 +222,16 @@ try {
   check('meta-regression slope -0.157', Math.abs(mr.moderator.b - -0.157) < 1e-3, String(mr.moderator.b));
   check('meta-regression R2 ~100', mr.R2_percent > 99.5, String(mr.R2_percent));
 
+  // -- analysis guards: an argument that cannot mean anything is refused, not ignored --
+  const capOnYear = await callErr('meta_regression', { moderator: 'year', cap: 3 });
+  check('capping a moderator other than weeks is rejected', /only accepted for moderator "weeks"/.test(capOnYear || ''), capOnYear);
+  const capZero = await callErr('meta_regression', { moderator: 'weeks', cap: 0 });
+  check('a non-positive cap is rejected', /cap must be a number > 0/.test(capZero || ''), capZero);
+  check('an uncapped regression on year still works', typeof (await call('meta_regression', { moderator: 'year' })).run === 'number');
+  const splitOnCategorical = await callErr('subgroup_analysis', { split_field: 'setting', split_at: 1 });
+  check('split_at on a categorical field is rejected, not silently ignored',
+    /split_at is only meaningful for numeric fields/.test(splitOnCategorical || ''), splitOnCategorical);
+
   // -- propose_study: validation, provenance, pending, human approval --
   const bad = await callErr('propose_study', { author: 'X', year: 1985, yi: 0.1, vi: -1, weeks: 0, source: 's', quote: 'q' });
   check('invalid vi rejected', /vi must be/.test(bad || ''), bad);
@@ -166,15 +241,26 @@ try {
   check('proposal without a source rejected', /missing required field: source/.test(noSource || ''), noSource);
   const dup = await callErr('propose_study', { author: 'Maxwell', year: 1970, yi: 0.80, vi: 0.063, weeks: 1, source: 'dup', quote: 'd = 0.80' });
   check('exact duplicate rejected', /duplicate/.test(dup || ''), dup);
+  // The runtime enforces the same integer bounds the input schema declares — a schema
+  // the handler does not back is documentation, not a contract.
+  const fracYear = await callErr('propose_study', { author: 'Fractional', year: 1985.5, yi: 0.1, vi: 0.02, weeks: 0, source: 's', quote: 'q' });
+  check('a non-integer year is rejected', /year must be a whole year/.test(fracYear || ''), fracYear);
+  const fracN = await callErr('propose_study', { author: 'Fractional N', year: 1985, yi: 0.1, vi: 0.02, weeks: 0, n1i: 12.5, source: 's', quote: 'q' });
+  check('a fractional group size is rejected', /n1i must be a whole sample size/.test(fracN || ''), fracN);
 
   const prop = await call('propose_study', {
     author: 'E2E Replication Team', year: 1985, yi: 0.05, vi: 0.02, weeks: 3,
     setting: 'group', tester: 'blind', n1i: 100, n2i: 100,
     source: 'E2E fixture — not a real study', quote: 'd = 0.05 (SE 0.14)',
+    derivation: 'd computed from the reported t(198) = 0.35 and group sizes',
   });
   check('proposal pending, not included', prop.status === 'pending_human_approval', JSON.stringify(prop));
   check('proposal returns a record hash', /^[0-9a-f]{8}$/.test(prop.record_hash || ''), String(prop.record_hash));
-  check('unrelated proposal is not flagged as a duplicate', !('possible_duplicate_of' in prop), JSON.stringify(prop));
+  // Present-and-null, not absent: an absent key reads as "not checked".
+  check('unrelated proposal reports possible_duplicate_of: null',
+    'possible_duplicate_of' in prop && prop.possible_duplicate_of === null, JSON.stringify(prop));
+  check('the pending message tells the agent to re-orient after approval',
+    /[Cc]all get_document_overview again after the human approves/.test(prop.message), prop.message);
   const withPending = await call('get_studies', { include_pending: true });
   check('pending visible via get_studies', withPending.pending_proposals?.length === 1, '');
   check('pending record exposes source, quote and hash',
@@ -218,6 +304,9 @@ try {
     && approvedRec.provenance.record_hash === prop.record_hash
     && !!approvedRec.provenance.proposed_at && !!approvedRec.provenance.approved_at,
     JSON.stringify(approvedRec.provenance));
+  check('provenance keeps the derivation of yi/vi when the proposal supplied one',
+    approvedRec.provenance.derivation === 'd computed from the reported t(198) = 0.35 and group sizes',
+    JSON.stringify(approvedRec.provenance.derivation));
   const baseRec = studiesAfter.studies.find((s) => s.id === 's01');
   check('original records keep their provenance string', baseRec.provenance === 'original evidence base', JSON.stringify(baseRec.provenance));
 

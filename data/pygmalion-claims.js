@@ -20,7 +20,7 @@ export const CLAIMS = [
   {
     id: 'c-textbook',
     statement: 'simply raising a teacher’s expectations makes children measurably smarter',
-    rule: 'Supported iff the pooled random-effects (REML) estimate over the full evidence base is positive AND p < 0.05.',
+    rule: 'Supported iff the pooled random-effects (REML) estimate over the full evidence base is positive AND p < 0.05. Passing would not establish generalized intelligence gains, uniform benefit, or transportability beyond these experiments.',
     test: {
       analysis: 'overall',
       args: { method: 'REML' },
@@ -41,7 +41,7 @@ export const CLAIMS = [
   {
     id: 'c-overall',
     statement: 'pooled across all studies, the average expectancy effect is small and not statistically significant',
-    rule: 'Supported iff the pooled REML estimate has p ≥ 0.05 AND |SMD| < 0.2 (small by Cohen’s convention).',
+    rule: 'Supported iff the pooled REML estimate has p ≥ 0.05 AND |SMD| < 0.2. This is a heuristic smallness check (|SMD| < 0.2 is Cohen’s convention, not a domain-defined SESOI), not an equivalence test.',
     test: {
       analysis: 'overall',
       args: {},
@@ -66,8 +66,8 @@ export const CLAIMS = [
   },
   {
     id: 'c-moderator',
-    statement: 'The length of prior teacher–pupil contact explains essentially all of the between-study differences',
-    rule: 'Supported iff meta-regression on min(weeks, 3) has negative slope, p < 0.05, AND R² ≥ 90% of heterogeneity explained.',
+    statement: 'The length of prior teacher–pupil contact is associated, under the fitted capped-linear model, with essentially all of the between-study differences',
+    rule: 'Supported iff meta-regression on min(weeks, 3) has negative slope, p < 0.05, AND R² ≥ 90%. R² here is a boundary-clipped proportional reduction in estimated τ², with no uncertainty interval; association, not causation.',
     test: {
       analysis: 'metareg',
       args: { moderator: 'weeks', cap: 3 },
@@ -89,10 +89,21 @@ export const CLAIMS = [
           verdict: 'nuanced',
           reason: 'slope significant ({moderator.b}, p = {moderator.p}) but explains only {R2_percent}% of heterogeneity',
         },
+        // A significant slope pointing the WRONG way is not "not significant": the
+        // old default reason mislabelled a positive-significant fit as a failure to
+        // detect anything. It is a detected association contradicting the claim.
+        {
+          when: [
+            { path: 'moderator.p', op: 'lt', value: 0.05 },
+            { path: 'moderator.b', op: 'ge', value: 0 },
+          ],
+          verdict: 'challenged',
+          reason: 'slope is statistically significant but nonnegative ({moderator.b}, p = {moderator.p}) — contrary to the claimed negative association',
+        },
         {
           default: true,
           verdict: 'challenged',
-          reason: 'moderator not significant (slope {moderator.b}, p = {moderator.p})',
+          reason: 'the required negative association was not detected (slope {moderator.b}, p = {moderator.p})',
         },
       ],
     },
@@ -100,7 +111,7 @@ export const CLAIMS = [
   {
     id: 'c-window',
     statement: 'in studies where teachers had known their pupils for at most one week, the expectancy induction produced a significant IQ gain',
-    rule: 'Supported iff the subgroup with ≤ 1 week of prior contact has a positive pooled estimate with p < 0.05.',
+    rule: 'Supported iff the subgroup with ≤ 1 week of prior contact has a positive pooled estimate with p < 0.05. A within-subgroup test in a post-hoc subset; it does not by itself establish a difference from the >1-week subgroup — subgroup_analysis’s between-group test addresses that.',
     test: {
       analysis: 'subgroup',
       args: { split_field: 'weeks', split_at: 1 },
@@ -122,7 +133,7 @@ export const CLAIMS = [
   {
     id: 'c-robust',
     statement: 'no single study drives these conclusions',
-    rule: 'Supported iff leave-one-out re-fits never flip the significance status of the pooled estimate.',
+    rule: 'Supported iff leave-one-out re-fits never flip the significance status of the pooled estimate. Checks significance-status stability only.',
     test: {
       analysis: 'loo',
       args: {},
@@ -143,7 +154,7 @@ export const CLAIMS = [
   {
     id: 'c-bias',
     statement: 'the evidence base shows no signs of publication bias',
-    rule: 'Supported iff Egger’s test p ≥ 0.10; nuanced if 0.05 ≤ p < 0.10 (borderline asymmetry); challenged if p < 0.05.',
+    rule: 'Egger’s regression test for small-study asymmetry, read as explicit strength-of-evidence labels: supported (p ≥ 0.10: no detected asymmetry), nuanced (0.05 ≤ p < 0.10: borderline signal — a distinct strength-of-evidence label, not a pass), challenged (p < 0.05: asymmetry detected).',
     test: {
       analysis: 'funnel',
       args: {},

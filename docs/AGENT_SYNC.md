@@ -17,7 +17,54 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
-## Status (2026-08-30 M2-lite — CURRENT)
+## Status (2026-08-30 Codex implementation review — fixes applied, CURRENT)
+
+- **docs/CODEX-FIX-DIRECTIVE.md (frozen, Fable-adjudicated) implemented in full,
+  C1–C30.** Scope: the agent-visible tool surface — lib/living-evidence.js,
+  lib/atlas.js, data/pygmalion-claims.js, the c-moderator prose span in
+  index.html, and the five verify suites. REJECTED items in the directive's
+  header were NOT implemented. All five suites green afterwards
+  (stats 38 / rules 104 / e2e 132 / workspace 142 / atlas 169 — every suite gained
+  assertions, none lost any).
+- **The one real behaviour bug: c-moderator's AST.** Its default branch narrated
+  a cause ("moderator not significant") for every non-supported case, so a slope
+  that was significant and POSITIVE (contradicting the claim outright) was
+  reported as a failure to detect anything. A branch for
+  `p < 0.05 AND b ≥ 0` now precedes the default; the default's reason is
+  "the required negative association was not detected". Red-then-green proven
+  against the old AST: fixture (b = 0.21, p = 0.001) printed "moderator not
+  significant (slope 0.21, p = 0.001)".
+- Other load-bearing changes: verdicts now ship `verdict_scope` ("authored
+  statistical rule only — not an independent judgment of truth, validity, or
+  bias") in both runtimes; "Never recompute … call tools" replaced by "label
+  independent calculations external, do not silently substitute them"; metafor
+  validation scoped to numerical reproduction; export_document returns a receipt
+  ({filename, bytes, download_started, content_digest}) and only ships the HTML
+  under `include_html: true`; atlas gained `list_nodes` and `get_audit_log`
+  (8 → 10 tools, atlas.html's "eight tools" line updated with them) and accepts
+  bare ids ('s10' ≡ 'rec:s10', 'c-window' ≡ 'claim:c-window'); the replication
+  gap reports `count_with_prereg: null` + `assessment_status: 'not_collected'`
+  instead of a fake measured 0; the coverage gap quotes the model's single
+  prediction for the whole band (pred3 = intercept + 3·slope ≈ −0.0644, computed
+  live and re-derived node-side in the e2e).
+- **Memos (single observation each — playbook candidates, see "propose" below):**
+  - A verdict/decision rule whose DEFAULT branch names a *cause* mislabels every
+    case it did not enumerate. Enumerate the sign × significance quadrants (or
+    whatever the equivalent partition is) and keep the default's wording purely
+    negative ("X was not detected"), never explanatory.
+  - Tool results that can be megabytes (file exports, full documents) should
+    return a receipt by default and gate the payload behind an explicit flag;
+    the human already has the file, and the agent's context is the scarce thing.
+  - A field the schema cannot represent must be `null` + an explicit
+    `assessment_status`, never `0`. "0 of 19 carry X" reads as measured-and-absent.
+  - Runtime validation must mirror the declared inputSchema (integer/minimum
+    checks): a schema the handler does not enforce is documentation, not a
+    contract.
+  - No `~/.claude/playbooks/` file covers agent-facing tool-surface design.
+    PROPOSAL for the user: a new `agent-facing-tool-surfaces.md` playbook to hold
+    the four memos above once a second project confirms them.
+
+## Status (2026-08-30 M2-lite — earlier today)
 
 - **M2-lite (atlas.html) implemented per docs/M2LITE-SPEC.md** (frozen by
   Fable): read-only evidence map — 33 nodes (1 estimand cell, 2 constructs,
