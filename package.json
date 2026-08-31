@@ -9,6 +9,7 @@
     "serve": "python3 -m http.server 8501 --bind 127.0.0.1",
     "e2e": "node verify/e2e.mjs",
     "e2e:workspace": "node verify/workspace.e2e.mjs",
-    "e2e:atlas": "node verify/atlas.e2e.mjs"
+    "e2e:atlas": "node verify/atlas.e2e.mjs",
+    "e2e:board": "node verify/board.e2e.mjs"
   }
 }

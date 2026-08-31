@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Living Evidence Board — hypotheses, claims, evidence and open questions, on one auditable map</title>
+<meta name="description" content="A messy research conversation restructured into one board: hypotheses, mechanisms, claims, evidence and open questions, extracted with quotes, included only by human approval, with computed (never fabricated) discovery panels.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
+<link rel="stylesheet" href="lib/living-evidence.css">
+<style>
+  html { background: var(--le-paper); }
+  body {
+    margin: 0; padding: 0 1.2rem 4rem; background: var(--le-paper); color: var(--le-ink);
+    font-family: Iowan Old Style, Palatino, Georgia, serif; font-size: 17px; line-height: 1.65;
+  }
+  main { max-width: 68rem; margin: 0 auto; }
+  header.doc { margin: 3rem 0 1.5rem; }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
+  .subtitle { color: var(--le-muted); font-size: 1.05rem; margin: 0 0 1.2rem; max-width: 48rem; }
+  h2 { font-size: 1.3rem; margin: 2.4rem 0 0.6rem; }
+  h3 { font-size: 1.05rem; margin: 1.6rem 0 0.4rem; }
+  a { color: var(--le-accent); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.86em; background: var(--le-code); padding: 0.05em 0.35em; border-radius: 4px; }
+  .standfirst, .honesty {
+    border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent);
+    background: var(--le-card); border-radius: 10px; padding: 0.9rem 1.1rem; font-size: 0.92em; margin: 1.2rem 0;
+  }
+  .honesty { border-left-color: var(--le-warn); }
+  .honesty strong { color: var(--le-warn); }
+  .honesty p, .standfirst p { margin: 0.3rem 0; }
+  .topic-block {
+    display: flex; gap: 1rem; align-items: flex-start; justify-content: space-between;
+    border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent);
+    background: var(--le-card); border-radius: 10px; padding: 0.9rem 1.1rem; margin: 1.2rem 0;
+  }
+  .topic-block .label { font-size: 0.72em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--le-muted); }
+  #board-topic { margin: 0.2rem 0 0; font-size: 1.05rem; }
+  .howto {
+    border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent);
+    background: var(--le-card); border-radius: 10px; padding: 0.9rem 1.1rem; font-size: 0.92em; margin: 1.2rem 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  }
+  @media (max-width: 720px) { .howto { grid-template-columns: 1fr; } .topic-block { flex-direction: column; } }
+  .howto h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+  .howto p, .howto ol { margin: 0.3rem 0; }
+  .howto ol { padding-left: 1.2em; }
+  .maprow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.4rem; }
+  .caption { font-size: 0.85em; color: var(--le-muted); max-width: 54rem; margin: 0.5rem 0 0; }
+  details { margin: 1rem 0; border: 1px solid var(--le-border); border-radius: 10px; background: var(--le-card); padding: 0.6rem 1rem; }
+  summary { cursor: pointer; font-weight: 650; }
+  .refs { font-size: 0.85em; color: var(--le-muted); }
+  #pending-section { display: none; }
+  section.le-has-pending#pending-section, #pending-section:has(.le-pending-card) { display: block; }
+  footer { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--le-border); color: var(--le-muted); font-size: 0.85em; }
+</style>
+</head>
+<body>
+<main>
+  <header class="doc">
+    <h1>Living Evidence Board</h1>
+    <p class="subtitle">A research conversation, restructured: hypotheses, mechanisms, claims, evidence and open
+    questions extracted onto one auditable board — for a question the SMD meta-analysis genre can't hold.</p>
+    <div class="le-status" id="board-status"><span class="le-status-dot le-off"></span><span>Initializing agent interface…</span></div>
+  </header>
+
+  <div class="standfirst">
+    <p><strong>What this is.</strong> The <a href="index.html">exemplar</a> and <a href="workspace.html">workspace</a>
+    pages are one fixed genre: an SMD meta-analysis, studies in, forest plot out. Most real research questions do not
+    fit that shape — this board generalizes the format's rules (propose → human approval, quotes required, visible
+    ledger, computed-not-fabricated diagnostics) to any mix of hypotheses, mechanisms, claims, evidence and open
+    questions. It is <a href="docs/DESIGN.md">DESIGN.md</a> v3 §7's Evidence Map (Layer 1), first concrete cut.</p>
+    <p>Extraction is agent work, done with quotes; inclusion is a human decision, one card at a time; the discovery
+    panel below is bookkeeping over what the board contains, never an assessment of the literature.</p>
+  </div>
+
+  <div class="honesty">
+    <p><strong>The board has NO statistics engine and issues NO verdicts.</strong> A claim's tally is edge
+    bookkeeping over approved evidence edges — not truth adjudication — and every surface that shows it says so.</p>
+    <p class="refs">Seeded evidence is agent-extracted from a real ChatGPT research conversation, not independently
+    verified: every seed evidence node carries that label and its <code>cited_as</code>, rendered on its panel.
+    Nothing here mutates except through propose → human approve; everything that does is ledgered.</p>
+  </div>
+
+  <div class="topic-block">
+    <div>
+      <div class="label">Research topic under examination</div>
+      <p id="board-topic">…</p>
+    </div>
+    <button class="le-btn" id="board-reset" type="button">Reset to seed</button>
+  </div>
+
+  <div class="howto">
+    <div>
+      <h3>If you are a human</h3>
+      <p>Click any node — a hypothesis, a mechanism, a claim pill (with its tally glyph), an evidence rect (coloured
+      by kind), or a dashed question box. Every node is keyboard-reachable: tab to it and press Enter. Escape or a
+      click on empty background clears the selection. Approve or reject each proposal from its card in the
+      <a href="#pending">pending section</a>; watch the <a href="#discoveries">discoveries panel</a> update. When the
+      board is worth keeping, export it from the <a href="#console">Tool console</a> — a JSON snapshot of every node,
+      edge, discovery and ledger entry.</p>
+    </div>
+    <div>
+      <h3>If you are an agent</h3>
+      <ol>
+        <li><code>board_overview</code> first — always.</li>
+        <li><code>list_nodes</code> / <code>get_discoveries</code> to see what the board already has and what it's
+        missing.</li>
+        <li><code>propose_node</code> (evidence needs <code>quote</code> + <code>cited_as</code>) and
+        <code>propose_edge</code> — both render an approval card; there is NO agent-side approve tool.</li>
+        <li><code>get_discoveries</code> again after the human approves — what changed, what to chase next.</li>
+      </ol>
+    </div>
+  </div>
+
+  <h2>The map</h2>
+  <div class="maprow">
+    <div class="atlas-frame" id="board-map"></div>
+    <p class="caption">Left → right: hypotheses (large boxes), mechanisms (small boxes, part-of their hypothesis),
+    claims (pills — tally glyph ● supported / ◐ contested / ○ unsupported, plus the supports+/contradicts− count),
+    evidence (small rects coloured by kind — legend on the map), and open questions (dashed boxes, far right).
+    Vertical order groups claims under the hypothesis they connect to most and sits evidence near its claims;
+    the canvas grows to whatever height the current node set needs, so nothing here is ever squeezed into overlap
+    — tallies are edge bookkeeping over approved evidence edges, not truth adjudication.</p>
+  </div>
+
+  <h2>Detail</h2>
+  <div id="board-panel">
+    <p class="atlas-panel-empty">Nothing selected yet — pick a node on the map, or let your agent drive
+    (<code>focus_node</code>). Whatever either of you opens, both of you see.</p>
+  </div>
+
+  <h2 id="discoveries">Computed discoveries</h2>
+  <p class="refs">Contested and unsupported claims, single-source claims, untested hypotheses, every open question,
+  and how much of the evidence base is still unverified — all computed live from the board's approved nodes and
+  edges, refreshed after every approval. Bookkeeping, not an assessment of the literature.</p>
+  <div id="board-discoveries"></div>
+
+  <section id="pending-section">
+    <h2>Pending — awaiting your approval</h2>
+    <p class="refs">An agent proposed these. They are not on the board, the map, or any tally until you decide.</p>
+    <div id="board-pending"></div>
+  </section>
+
+  <h2 id="ledger">Audit ledger</h2>
+  <p class="refs">Append-only record of everything done to this board in your session — by agents, by you, and by the
+  page itself. Pure reads are not ledgered; anything that changes what is on screen or what the board contains is.</p>
+  <ol class="le-ledger" id="board-ledger"></ol>
+
+  <h2 id="console">Tool console</h2>
+  <details>
+    <summary>Drive the board's tools by hand (no agent required)</summary>
+    <p class="refs">The same 11 tools an agent sees through WebMCP — same schemas, same effects on the board, same
+    ledger. Nothing an agent can do here is hidden from you.</p>
+    <div id="board-console"></div>
+  </details>
+
+  <footer>
+    <p><strong>Living Evidence v0.1 — Evidence Board.</strong> A mutable, general evidence graph beyond the SMD
+    genre — see the <a href="index.html">exemplar document</a>, the <a href="workspace.html">workspace</a> that
+    builds one, and the <a href="atlas.html">read-only Atlas</a> over the exemplar's own evidence. Source, format
+    spec and design document: <a href="https://github.com/microckey/living-evidence">github.com/microckey/living-evidence</a>
+    (MIT). Seed content is extracted from a real ChatGPT research conversation (2026-08); the cited primary sources
+    were not independently checked by this project. The page's public API is <code>window.LivingEvidenceBoard</code>.</p>
+    <p><noscript>This board requires JavaScript: the map, its layout and its discoveries are computed, not drawn in advance.</noscript></p>
+  </footer>
+</main>
+
+<script type="module">
+  import { initBoard } from './lib/board.js';
+  import { SEED } from './data/housewife-board-seed.js';
+
+  initBoard({
+    seed: SEED,
+    storageKey: 'le-board-v1',
+    mounts: {
+      map: '#board-map', panel: '#board-panel', discoveries: '#board-discoveries',
+      pending: '#board-pending', ledger: '#board-ledger', status: '#board-status',
+      console: '#board-console', reset: '#board-reset', topic: '#board-topic',
+    },
+  });
+</script>
+</body>
+</html>

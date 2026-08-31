@@ -217,3 +217,30 @@
 .atlas-chip { vertical-align: baseline; margin-left: 0.5em; }
 .atlas-ast { margin: 0.7em 0; }
 .atlas-ast summary { font-size: 0.84em; font-weight: 500; color: var(--le-muted); }
+
+/* ---------------------------------------------------- Evidence Board map
+   (board.html / lib/board.js). Node/edge SELECTION, DIM and FRAME mechanics
+   are the shared atlas-* rules above (.atlas-node, .atlas-selected,
+   .atlas-ring, .atlas-map, .atlas-has-selection, .atlas-frame, .atlas-card,
+   .atlas-kv, .atlas-list, .atlas-note, .atlas-legend-dot) — reused as-is,
+   not duplicated. Only the board's own per-type/per-kind/per-edge-type
+   colouring is new. */
+.board-node-hypothesis .atlas-shape { stroke: var(--le-accent); stroke-width: 1.7; fill: var(--le-accent-soft); }
+.board-node-mechanism .atlas-shape { stroke: var(--le-border); }
+.board-node-claim .atlas-shape { stroke: var(--le-accent); }
+.board-node-question .atlas-shape { stroke-dasharray: 5 4; stroke: var(--le-muted); }
+
+.board-kind-official-stat { fill: var(--le-accent); fill-opacity: 0.22; stroke: var(--le-accent); }
+.board-kind-survey { fill: var(--le-good); fill-opacity: 0.22; stroke: var(--le-good); }
+.board-kind-regression { fill: var(--le-warn); fill-opacity: 0.22; stroke: var(--le-warn); }
+.board-kind-study { fill: var(--le-bad); fill-opacity: 0.22; stroke: var(--le-bad); }
+
+.board-edge-supports { stroke: var(--le-good); }
+.board-edge-contradicts { stroke: var(--le-bad); stroke-dasharray: 4 4; }
+.board-edge-part-of { stroke: var(--le-border); }
+.board-edge-tests { stroke: var(--le-warn); stroke-dasharray: 1 3; stroke-linecap: round; }
+.board-edge-refines { stroke: var(--le-accent); }
+
+.board-tally-supported { fill: var(--le-good); }
+.board-tally-contested { fill: var(--le-warn); }
+.board-tally-unsupported { fill: var(--le-muted); }

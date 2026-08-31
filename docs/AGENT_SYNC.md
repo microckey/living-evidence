@@ -17,7 +17,45 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
-## Status (2026-08-30 Codex implementation review — fixes applied, CURRENT)
+## Status (2026-08-31 Evidence Board — CURRENT)
+
+- **board.html + lib/board.js + data/housewife-board-seed.js shipped** per
+  docs/BOARD-SPEC.md (frozen by Fable; built by Sonnet in 2 stages per the
+  user's new hierarchy: Sonnet implements, Fable orchestrates/reviews).
+  The Evidence Map (DESIGN v3 §7 Layer 1) generalized beyond the SMD genre:
+  hypotheses/claims/evidence/mechanisms/questions + typed-edge validity
+  matrix, propose→approve for nodes AND edges, computed discoveries
+  (contested/unsupported/single-source/untested — explicitly bookkeeping,
+  not truth), localStorage persistence, 11 WebMCP tools born compliant with
+  the Codex-round conventions. Seed = the owner's ChatGPT research
+  conversation on 東京の専業主婦率 (40 nodes / 43 edges, verbatim quotes,
+  every evidence node labeled 'unverified — extracted from a conversation').
+- **Spec contradiction caught by the build**: §6 named five
+  evidence→hypothesis edges the §1 matrix forbade; Sonnet correctly obeyed
+  the matrix and flagged it. Fable RULING (recorded in BOARD-SPEC §1):
+  matrix extended (supports/contradicts allow evidence→hypothesis), the five
+  edges restored — e-1995 directly contradicting h-selection is the board's
+  most instructive structure.
+- Review round (Fable×3) highlights, all applied by Sonnet (B1-B12):
+  edge-endpoint trimming (lines were striking through node labels);
+  restore-path validation for PENDING items (tampered snapshot could plant a
+  quote-less evidence node via one Approve); **golden per-claim tally map
+  transcribed from the spec as literals** — reviewer proved the old
+  "independent" recomputation shared the seed module and stayed green under
+  a flipped seed edge; the golden now goes red on the same injection
+  (proven). Golden seed values pinned (e-mukyo 26.4/7.3 etc., e-kyuyo's
+  canonical no-verbatim-quote placeholder).
+- Accepted deviations (recorded): pending items show a pointer note in the
+  detail panel instead of duplicate approve buttons; long 'tests' edges can
+  cross an unrelated intermediate node (one case: q-causal over e-jilpt16 —
+  dotted, still readable; path routing is out of v1 scope). Map height is
+  computed (830) not the spec's ≈760.
+- Suites: stats / rules 104 / e2e / workspace / atlas / board — six suites
+  all green, independently re-run by Fable.
+- OPEN: whether board.html enters the Devpost submission (user decision);
+  README/SUBMISSION do not mention the board yet.
+
+## Status (2026-08-30 Codex implementation review — fixes applied)
 
 - **docs/CODEX-FIX-DIRECTIVE.md (frozen, Fable-adjudicated) implemented in full,
   C1–C30.** Scope: the agent-visible tool surface — lib/living-evidence.js,
