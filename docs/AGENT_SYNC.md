@@ -17,7 +17,44 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
-## Status (2026-08-31 Evidence Board — CURRENT)
+## Status (2026-09-01 Board in submission + Codex round 2 — CURRENT)
+
+- **Board included in the submission** (user decision): README + SUBMISSION
+  updated (board paragraph/bullet, video re-cut to 9 beats targeting ≤2:50
+  with a complete synthetic demo prompt and jump-cut/pre-stage directions).
+- **Codex packet review #2** (4-page runtime dump + README + SUBMISSION;
+  verdict "not submission-ready yet") — adjudicated and applied:
+  - Board runtime (Sonnet, D1-D13): get_discoveries →
+    **get_board_diagnostics** with literal bucket names + inspectable
+    objects; tally_status → 4-state **evidence_edge_state**
+    (none|support_only|contradiction_only|mixed — the 3-state design could
+    not classify contradiction-only claims); topic + e-1995 rewritten to
+    attribute figures to the conversation; **ed35/ed43 REMOVED** (their
+    'contradicts h-selection' contradicted their own rationales — the
+    refuted target 'selection as sole explanation' is asserted by no node;
+    seed now 41 edges, every supports/contradicts edge carries a rationale);
+    propose_node discriminated oneOf (evidence branch requires
+    value/year/kind/cited_as/quote); suggested_flow fixed (was impossible as
+    written); honesty/ledger contract corrected ('active edges = preloaded
+    seed + human-approved additions'; set_topic mutates without approval —
+    said so); suite_context on all four pages; duplicate edges rejected;
+    verification labels on ALL evidence. Fault injection re-proven red.
+  - Docs (Fable): construct fixes (non-working wives, conversation-reported,
+    'Japan's highest' attributed not asserted); Atlas collection-frame
+    limits everywhere ('none of these nineteen records' — a coverage lead,
+    not nonexistence proof); moderator 'only' scoped to the corpus +
+    authored-model caveat; hash → drift-detecting checksum; per-page tool
+    counts (12/15/10/11); README design rules matched to the shipped ledger
+    contract; absolutes softened (kept the manifesto lines: 'For an agent,
+    reading is rerunning', 'first page of an executable layer').
+  - board.html static prose synced to the new vocabulary (Fable).
+- Suites: six, all green (board now 136 checks), independently re-run.
+- REJECTED from Codex round (recorded): renaming the `tests` edge type to
+  `would_test` (diagnostic rename covers the honesty; edge rename ripples);
+  splitting evidence `kind` into source_form × analysis_type (post-deadline);
+  full removal of rhetorical spine from the pitch.
+
+## Status (2026-08-31 Evidence Board)
 
 - **board.html + lib/board.js + data/housewife-board-seed.js shipped** per
   docs/BOARD-SPEC.md (frozen by Fable; built by Sonnet in 2 stages per the

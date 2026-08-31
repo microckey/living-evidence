@@ -75,7 +75,7 @@
 
   <div class="honesty">
     <p><strong>The board has NO statistics engine and issues NO verdicts.</strong> A claim's tally is edge
-    bookkeeping over approved evidence edges — not truth adjudication — and every surface that shows it says so.</p>
+    bookkeeping over active evidence edges (preloaded seed + human-approved additions) — not truth adjudication — and every surface that shows it says so.</p>
     <p class="refs">Seeded evidence is agent-extracted from a real ChatGPT research conversation, not independently
     verified: every seed evidence node carries that label and its <code>cited_as</code>, rendered on its panel.
     Nothing here mutates except through propose → human approve; everything that does is ledgered.</p>
@@ -103,11 +103,11 @@
       <h3>If you are an agent</h3>
       <ol>
         <li><code>board_overview</code> first — always.</li>
-        <li><code>list_nodes</code> / <code>get_discoveries</code> to see what the board already has and what it's
+        <li><code>list_nodes</code> / <code>get_board_diagnostics</code> to see what the board already has and what it's
         missing.</li>
         <li><code>propose_node</code> (evidence needs <code>quote</code> + <code>cited_as</code>) and
         <code>propose_edge</code> — both render an approval card; there is NO agent-side approve tool.</li>
-        <li><code>get_discoveries</code> again after the human approves — what changed, what to chase next.</li>
+        <li><code>get_board_diagnostics</code> again after the human approves — what changed, what to chase next.</li>
       </ol>
     </div>
   </div>
@@ -116,11 +116,11 @@
   <div class="maprow">
     <div class="atlas-frame" id="board-map"></div>
     <p class="caption">Left → right: hypotheses (large boxes), mechanisms (small boxes, part-of their hypothesis),
-    claims (pills — tally glyph ● supported / ◐ contested / ○ unsupported, plus the supports+/contradicts− count),
+    claims (pills — evidence_edge_state glyph ● support_only / ◐ mixed / ⊘ contradiction_only / ○ none, plus the supports+/contradicts− count),
     evidence (small rects coloured by kind — legend on the map), and open questions (dashed boxes, far right).
     Vertical order groups claims under the hypothesis they connect to most and sits evidence near its claims;
     the canvas grows to whatever height the current node set needs, so nothing here is ever squeezed into overlap
-    — tallies are edge bookkeeping over approved evidence edges, not truth adjudication.</p>
+    — edge states are bookkeeping over active evidence edges, not truth adjudication.</p>
   </div>
 
   <h2>Detail</h2>
@@ -130,7 +130,7 @@
   </div>
 
   <h2 id="discoveries">Computed discoveries</h2>
-  <p class="refs">Contested and unsupported claims, single-source claims, untested hypotheses, every open question,
+  <p class="refs">Claims with mixed or missing evidence edges, single-citation-label claims, hypotheses without linked test questions, every open question,
   and how much of the evidence base is still unverified — all computed live from the board's approved nodes and
   edges, refreshed after every approval. Bookkeeping, not an assessment of the literature.</p>
   <div id="board-discoveries"></div>

@@ -48,6 +48,23 @@ Edges: {id, from, to, type: 'supports'|'contradicts'|'part-of'|'tests'|
 evidence→claim, claim→hypothesis, **or evidence→hypothesis**; part-of:
 mechanism→hypothesis; tests: question→claim|hypothesis; refines:
 hypothesis→hypothesis. Anything else → error naming the matrix.
+[v2 ruling, Fable 2026-09-01, from the Codex agent-runtime review: (1) the
+three-state tally had an unclassifiable case — a claim with only contradicts
+edges. Replaced by the four-state `evidence_edge_state`
+none|support_only|contradiction_only|mixed, and the diagnostics tool renamed
+`get_board_diagnostics` with literal bucket names
+(claims_with_mixed_edge_labels etc.) — graph bookkeeping must not wear
+verdict vocabulary. (2) Seed edges ed35/ed43 ("contradicts h-selection")
+contradicted their own rationales: what e-1995/c-notonly refute is
+"selection as the SOLE explanation", which no node asserts; the content
+lives honestly in c-notonly (supported, feeding h-model). Both edges
+REMOVED — seed total 43→41 — and every remaining supports/contradicts seed
+edge must carry a nonempty rationale. (3) Canonical topic and e-1995
+quote/statement texts are the ones in the D3 directive of the fix round
+(recorded in AGENT_SYNC); the e-1995 quote is the full conversation
+sentence, and its statement attributes the figures to the conversation with
+primary tables marked unverified.]
+
 [v1 ruling, Fable 2026-08-31: §6 named five evidence→hypothesis edges while
 the original matrix omitted that pair — an internal spec contradiction the
 build correctly surfaced instead of violating. Resolution (a): the matrix now

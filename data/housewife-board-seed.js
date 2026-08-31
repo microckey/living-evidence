@@ -1,16 +1,18 @@
 // housewife-board-seed.js — seed data for the Evidence Board (board.html + lib/board.js).
 //
 // Transcribed EXACTLY from docs/BOARD-SPEC.md §6 (frozen 2026-08-31): 40 nodes
-// (2 hypotheses, 4 mechanisms, 8 claims, 23 evidence, 3 questions) and 43
-// edges (incl. the five evidence→hypothesis edges — e-kaiki, e-mikonritsu and
-// e-kyuyo supporting h-selection, e-ishiki supporting h-model, e-1995
-// contradicting h-selection — per the v1 matrix ruling in docs/BOARD-SPEC.md
-// §1). Every evidence node carries the seed verification label and
-// `cited_as` the spec requires — this is agent-extracted material from a
-// ChatGPT research conversation, not independently checked, and every
-// surface that shows it must say so (see BOARD-SPEC.md §0).
+// (2 hypotheses, 4 mechanisms, 8 claims, 23 evidence, 3 questions) and, as of
+// the Codex-review fix round (D4), 41 edges (incl. FOUR evidence→hypothesis
+// edges — e-kaiki, e-mikonritsu and e-kyuyo supporting h-selection, e-ishiki
+// supporting h-model — per the v1 matrix ruling in docs/BOARD-SPEC.md §1).
+// Every evidence node carries the seed verification label and `cited_as` the
+// spec requires — this is agent-extracted material from a ChatGPT research
+// conversation, not independently checked, and every surface that shows it
+// must say so (see BOARD-SPEC.md §0). `kind` is likewise only ever "source
+// kind as reported in the conversation (unverified)" — not an independently
+// checked classification.
 //
-// One seed-data fact the spec's own prose could not honestly resolve,
+// Seed-data facts the spec's own prose could not honestly resolve,
 // documented once here rather than silently patched over:
 //
 //  - e-kyuyo is the one evidence row §6 never gives a quotable fragment for
@@ -18,6 +20,17 @@
 //    is a required field and the honesty rule forbids inventing one, so its
 //    quote states plainly that no verbatim fragment was given, rather than
 //    fabricating a citation sentence that was never in the conversation.
+//
+//  - [Codex-review fix D4, applied here]: two contradicts edges into
+//    h-selection — ed35 (c-notonly → h-selection) and ed43 (e-1995 →
+//    h-selection) — were REMOVED. Both refuted "economic selection as the
+//    SOLE explanation," a reading no node actually asserts: h-selection
+//    itself only claims selection raises the rate, and c-notonly's own
+//    content (selection alone can't explain the gap) already feeds h-model
+//    as a SUPPORTED claim via ed34. Edges whose own rationale argues against
+//    their target's actual content contradicted themselves, not the board.
+//    41 edges remain (43 minus these two); every remaining supports/
+//    contradicts edge below carries a one-line rationale.
 
 const SEED_VERIFICATION = 'unverified — extracted from a ChatGPT research conversation (2026-08); the cited primary sources were not independently checked';
 
@@ -148,9 +161,9 @@ const EVIDENCE = [
   evidence('e-mikonritsu', '男性所得と未婚率',
     '男性では所得が高くなるほど未婚率が低下する関係がある。',
     { value: '所得が高いほど未婚率が低い', year: 'n/a', kind: 'regression', cited_as: '内閣府', quote: '男性では所得が高くなるほど未婚率が低下する関係' }),
-  evidence('e-1995', '1995年の専業主婦率',
-    '1995年時点の有配偶女性の専業主婦率は東京50.4%・福井31.1%で、当時から大差があった。',
-    { value: '有配偶女性の専業主婦率 東京50.4% vs 福井31.1% — 当時から大差', year: 1995, kind: 'official-stat', cited_as: '総務省統計局(国勢調査)', quote: '東京 50.4% 福井 31.1%' }),
+  evidence('e-1995', '1995年の専業主婦率（会話記載）',
+    '会話は、1995年の「有配偶女性の専業主婦率」を東京50.4%、福井31.1%と記載している。指標定義と国勢調査の一次表は未確認。',
+    { value: '有配偶女性の専業主婦率 東京50.4% vs 福井31.1% — 当時から大差', year: 1995, kind: 'official-stat', cited_as: '総務省統計局(国勢調査)', quote: 'なんと1995年国勢調査でも、有配偶女性の専業主婦率は、東京 50.4% 福井 31.1%でした。' }),
   evidence('e-ishiki', '固定的性別役割意識',
     '固定的性別役割意識は、女性については南関東がほとんどの項目で全国最低。',
     { value: '女性は南関東がほとんどの項目で全国最低', year: 2025, kind: 'official-stat', cited_as: '男女共同参画白書', quote: '南関東＝東京圏がほとんどの項目で全国で最も低い' }),
@@ -196,44 +209,73 @@ const EDGES = [
   edge('ed05', 'm-oneincome', 'h-model', 'part-of'),
 
   // evidence -> claim (supports / contradicts)
-  edge('ed06', 'e-mukyo', 'c-gap', 'supports'),
-  edge('ed07', 'e-tfr', 'c-marriage', 'supports'),
-  edge('ed08', 'e-yuhaigu', 'c-marriage', 'supports'),
-  edge('ed09', 'e-mikon', 'c-marriage', 'supports'),
+  edge('ed06', 'e-mukyo', 'c-gap', 'supports',
+    '東京26.4%・福井7.3%という数値が「約3.6倍」の根拠になっている。'),
+  edge('ed07', 'e-tfr', 'c-marriage', 'supports',
+    '東京の合計特殊出生率が全国最低であるという、主張の前提部分を裏付ける。'),
+  edge('ed08', 'e-yuhaigu', 'c-marriage', 'supports',
+    '有配偶率そのものが東京で全国最低水準であることを示す直接的な裏付け。'),
+  edge('ed09', 'e-mikon', 'c-marriage', 'supports',
+    '未婚割合の高さは有配偶率の低さと表裏の関係にある。'),
   edge('ed10', 'e-konin', 'c-marriage', 'contradicts',
     '「東京は婚姻率最低」という素朴な形の主張への反証。有配偶率ベースの主張本体とは両立（フロー vs ストック）。'),
-  edge('ed11', 'e-shokon', 'c-marriage', 'supports'),
-  edge('ed12', 'e-sansedai', 'c-grandparent', 'supports'),
-  edge('ed13', 'e-fukui-doukyo', 'c-grandparent', 'supports'),
-  edge('ed14', 'e-doukyo-shugyo', 'c-grandparent', 'supports'),
-  edge('ed15', 'e-tsukin', 'c-commute', 'supports'),
-  edge('ed16', 'e-kaji', 'c-commute', 'supports'),
-  edge('ed17', 'e-60h', 'c-commute', 'supports'),
-  edge('ed18', 'e-zeimu', 'c-income', 'supports'),
+  edge('ed11', 'e-shokon', 'c-marriage', 'supports',
+    '初婚年齢の高さは、ある時点で見た有配偶率を押し下げる方向に働く。'),
+  edge('ed12', 'e-sansedai', 'c-grandparent', 'supports',
+    '三世代同居率の地域差が、祖父母による育児支援インフラの差を示す指標になっている。'),
+  edge('ed13', 'e-fukui-doukyo', 'c-grandparent', 'supports',
+    '福井で共働き世帯の親同居率が全国平均より高いことが、祖父母支援の存在を裏付ける。'),
+  edge('ed14', 'e-doukyo-shugyo', 'c-grandparent', 'supports',
+    '親との同居が妻の就業を促進するという回帰結果が、祖父母支援仮説の因果的な裏付けになっている。'),
+  edge('ed15', 'e-tsukin', 'c-commute', 'supports',
+    '通勤時間の地域差そのものが、時間コストの差の直接的な裏付けになっている。'),
+  edge('ed16', 'e-kaji', 'c-commute', 'supports',
+    '夫の家事・育児参加が妻の就業を左右するという結果が、時間的制約コストの重要性を補強する。'),
+  edge('ed17', 'e-60h', 'c-commute', 'supports',
+    '夫の長時間労働が妻のフルタイム就業を妨げるという、時間コストの直接的な裏付け。'),
+  edge('ed18', 'e-zeimu', 'c-income', 'supports',
+    '出産前所得を揃えた上での追跡データという、交絡を排除した形の直接的な裏付け。'),
   edge('ed19', 'e-jilpt16', 'c-income', 'contradicts',
     '上位で高い傾向はあるが単調増加ではない、という部分的反証。'),
-  edge('ed20', 'e-teishotoku', 'c-income', 'supports'),
-  edge('ed21', 'e-kaiki', 'c-marriage', 'supports'),
+  edge('ed20', 'e-teishotoku', 'c-income', 'supports',
+    '夫が低所得なほど妻の就業率が高いという傾向は、逆方向から見て同じ関係を裏付ける。'),
+  edge('ed21', 'e-kaiki', 'c-marriage', 'supports',
+    '非正規雇用率・教育費・家賃という都市部で高い変数が有配偶率を押し下げるという回帰結果の裏付け。'),
   // e-mikonritsu and e-kyuyo are seeded above but have no edge here — see the
   // file header (§6 named only an evidence->hypothesis edge for both, which
   // the validity matrix does not allow for any edge type).
-  edge('ed22', 'e-1995', 'c-notonly', 'supports'),
-  edge('ed23', 'e-ishiki', 'c-values', 'supports'),
-  edge('ed24', 'e-ushinai', 'c-values', 'supports'),
-  edge('ed25', 'e-sangyo', 'c-industry', 'supports'),
-  edge('ed26', 'e-hoiku', 'c-industry', 'supports'),
+  edge('ed22', 'e-1995', 'c-notonly', 'supports',
+    '1995年時点で既に大きな差があったとされる会話の記載が、選抜強化以前からの差という主張の根拠になっている（一次資料未照合）。'),
+  edge('ed23', 'e-ishiki', 'c-values', 'supports',
+    '性別役割意識が東京圏でむしろ低いというデータが、「都会は平等志向」という単純な価値観説とは逆方向であることを示す。'),
+  edge('ed24', 'e-ushinai', 'c-values', 'supports',
+    '結婚・出産期の有業率低下幅が首都圏で著しく大きいことが、価値観だけでは説明できない構造の存在を示す。'),
+  edge('ed25', 'e-sangyo', 'c-industry', 'supports',
+    '女性正規職員の産業構成の地域差が、地方の産業構造仮説を裏付ける。'),
+  edge('ed26', 'e-hoiku', 'c-industry', 'supports',
+    '保育所定員の多さが女性の労働参加を後押しするという結果が、継続就業を支えるインフラ面を補強する。'),
 
   // claim -> hypothesis (supports / contradicts)
-  edge('ed27', 'c-gap', 'h-selection', 'supports'),
-  edge('ed28', 'c-marriage', 'h-selection', 'supports'),
-  edge('ed29', 'c-income', 'h-selection', 'supports'),
-  edge('ed30', 'c-grandparent', 'h-model', 'supports'),
-  edge('ed31', 'c-commute', 'h-model', 'supports'),
-  edge('ed32', 'c-values', 'h-model', 'supports'),
-  edge('ed33', 'c-industry', 'h-model', 'supports'),
-  edge('ed34', 'c-notonly', 'h-model', 'supports'),
-  edge('ed35', 'c-notonly', 'h-selection', 'contradicts',
-    '単独説明への反証。押し上げ要因としての選抜とは両立'),
+  edge('ed27', 'c-gap', 'h-selection', 'supports',
+    '妻無業率の大きな地域差そのものが、経済的選抜仮説が説明しようとする現象の存在を裏付ける。'),
+  edge('ed28', 'c-marriage', 'h-selection', 'supports',
+    '有配偶率の低さという経路も、高コストによる結婚・出産ハードルという選抜仮説の機序と整合する。'),
+  edge('ed29', 'c-income', 'h-selection', 'supports',
+    '夫所得と妻の非就業の関連が、高所得世帯側への選抜という仮説の機序と整合する。'),
+  edge('ed30', 'c-grandparent', 'h-model', 'supports',
+    '祖父母支援の欠如という要因が、4要因モデルの一角として直接対応する。'),
+  edge('ed31', 'c-commute', 'h-model', 'supports',
+    '通勤・時間コストという要因が、4要因モデルの一角として直接対応する。'),
+  edge('ed32', 'c-values', 'h-model', 'supports',
+    '価値観説の反証が、4要因モデルが価値観説に代わる説明を提示するという主張を補強する。'),
+  edge('ed33', 'c-industry', 'h-model', 'supports',
+    '地方の産業構造という要因が、4要因モデルの背景説明を補強する。'),
+  edge('ed34', 'c-notonly', 'h-model', 'supports',
+    '選抜単独では説明できないという主張が、複数要因を組み合わせる4要因モデルの必要性を裏付ける。'),
+  // [D4] ed35 (c-notonly → h-selection, contradicts) REMOVED — see the file
+  // header: the refuted target was "selection as the SOLE explanation," which
+  // no node here asserts, and c-notonly's content already feeds h-model as a
+  // supported claim via ed34.
 
   // question tests claim|hypothesis
   edge('ed36', 'q-decompose', 'h-selection', 'tests'),
@@ -241,18 +283,25 @@ const EDGES = [
   edge('ed38', 'q-share', 'h-model', 'tests'),
 
   // evidence -> hypothesis, directly (v1 matrix ruling, docs/BOARD-SPEC.md §1;
-  // the five edges §6 named for these evidence nodes, in addition to whatever
-  // other edge each already carries above).
-  edge('ed39', 'e-kaiki', 'h-selection', 'supports'),
-  edge('ed40', 'e-mikonritsu', 'h-selection', 'supports'),
-  edge('ed41', 'e-kyuyo', 'h-selection', 'supports'),
-  edge('ed42', 'e-ishiki', 'h-model', 'supports'),
-  edge('ed43', 'e-1995', 'h-selection', 'contradicts',
-    '単独説明への反証。押し上げ要因としての選抜とは両立'),
+  // four of the five edges §6 named for these evidence nodes, in addition to
+  // whatever other edge each already carries above — the fifth, e-1995 →
+  // h-selection (contradicts), was ed43; see [D4] below for its removal).
+  edge('ed39', 'e-kaiki', 'h-selection', 'supports',
+    '非正規雇用率・教育費・家賃という経済的コスト変数が有配偶率を左右するという回帰結果が、経済的選抜仮説を直接裏付ける。'),
+  edge('ed40', 'e-mikonritsu', 'h-selection', 'supports',
+    '男性の所得が高いほど未婚率が下がるという関係が、高所得側への選抜という仮説の機序と整合する。'),
+  edge('ed41', 'e-kyuyo', 'h-selection', 'supports',
+    '東京の男性給与水準が全国最高であること自体が、高所得世帯が集まりやすいという選抜仮説の前提を補強する。'),
+  edge('ed42', 'e-ishiki', 'h-model', 'supports',
+    '性別役割意識が東京圏でむしろ低いというデータが、価値観説を退け4要因モデルを支持する材料になる。'),
+  // [D4] ed43 (e-1995 → h-selection, contradicts) REMOVED — same reasoning as
+  // ed35 above: h-selection does not assert selection is the SOLE
+  // explanation, so a "differences predate selection" finding does not
+  // actually contradict it. e-1995 still supports c-notonly via ed22.
 ];
 
 export const SEED = {
-  topic: '東京の専業主婦率はなぜ高いのか — 経済的選抜・家族構造・時間コスト',
+  topic: '会話で報告された東京の『専業主婦率』は、どの年・母集団・指標定義で他地域より高いのか。差が確認できる場合、経済的選抜・家族構造・時間コストはどこまで説明しうるか（一次資料未照合）',
   nodes: NODES,
   edges: EDGES,
 };

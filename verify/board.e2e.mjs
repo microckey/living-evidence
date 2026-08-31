@@ -1,5 +1,14 @@
 // Real-browser E2E for the Living Evidence Board (BOARD-SPEC.md) — verify/board.e2e.mjs
 //
+// Updated under the Codex-review fix round (docs/CODEX-FIX-DIRECTIVE-2, D1-D13):
+// get_discoveries -> get_board_diagnostics with enriched {id,label,...} bucket
+// objects (incl. the NEW claims_with_contradiction_only_edges state), a
+// claim's tally_status -> evidence_edge_state (none/support_only/
+// contradiction_only/mixed), ed35 + ed43 removed from the seed (43 -> 41
+// edges) with every remaining supports/contradicts seed edge carrying a
+// rationale, propose_edge now REJECTS exact duplicates instead of merely
+// flagging them, and propose_node's inputSchema is a discriminated oneOf.
+//
 // The load-bearing assertions in this file are the ones that recompute the
 // board's claims independently of the page's DOM and state, and demand
 // equality with what the page reports:
@@ -9,13 +18,15 @@
 //   - block 2b/2c go one step further and are independent of the SEED MODULE
 //     too: a GOLDEN per-claim tally map and golden evidence values, both
 //     transcribed as bare literals straight out of docs/BOARD-SPEC.md §6/§1
-//     with no import of the seed at all. This is the check that actually
-//     catches a wrong seed — block 2's seed-derived recomputation agrees with
-//     a buggy seed by construction, since both sides read the same buggy
-//     data.
-//   - block 4 fault-injects an evidence->evidence edge and an evidence node
-//     missing its quote, and demands both are REJECTED, naming the matrix /
-//     the missing field, before it ever tests the happy path.
+//     (as amended by D4) with no import of the seed at all. This is the check
+//     that actually catches a wrong seed — block 2's seed-derived
+//     recomputation agrees with a buggy seed by construction, since both
+//     sides read the same buggy data. (Re-proven red-then-green against a
+//     flipped ed25 as part of this fix round — see docs/AGENT_SYNC.md.)
+//   - block 4 fault-injects an evidence->evidence edge, an evidence node
+//     missing its quote, and a duplicate seed edge, and demands all three are
+//     REJECTED, naming the matrix / the missing field / the duplicate,
+//     before it ever tests the happy path.
 //   - block 5 corrupts the localStorage snapshot — both a wholly unreadable
 //     one and a structurally-valid one carrying an invalid PENDING edge —
 //     and demands a clean boot with only the bad item dropped, never a crash.
@@ -27,7 +38,7 @@ import { createRequire } from 'module';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { computeTally, computeDiscoveries, SEED_VERIFICATION_LABEL, TALLY_SCOPE } from '../lib/board.js';
+import { computeTally, computeBoardDiagnostics, SEED_VERIFICATION_LABEL, TALLY_SCOPE } from '../lib/board.js';
 import { SEED } from '../data/housewife-board-seed.js';
 
 const require = createRequire(import.meta.url);
@@ -95,16 +106,27 @@ try {
   console.log('\n# 1. boot: tools, status, map');
   const tools = await page.evaluate(() => window.LivingEvidenceBoard.tools.map((t) => t.name));
   check('11 tools exposed', tools.length === 11, tools.join(','));
-  check('the expected 11 tools', JSON.stringify(tools) === JSON.stringify([
-    'board_overview', 'list_nodes', 'get_node', 'get_edges', 'get_discoveries',
+  check('the expected 11 tools (get_discoveries renamed to get_board_diagnostics)', JSON.stringify(tools) === JSON.stringify([
+    'board_overview', 'list_nodes', 'get_node', 'get_edges', 'get_board_diagnostics',
     'propose_node', 'propose_edge', 'focus_node', 'set_topic', 'export_board', 'get_audit_log',
   ]), tools.join(','));
   const readOnlyNames = await page.evaluate(() => window.LivingEvidenceBoard.tools.filter((t) => t.readOnly).map((t) => t.name));
   check('the six read tools are declared read-only',
-    JSON.stringify(readOnlyNames.sort()) === JSON.stringify(['board_overview', 'get_audit_log', 'get_discoveries', 'get_edges', 'get_node', 'list_nodes'].sort()),
+    JSON.stringify(readOnlyNames.sort()) === JSON.stringify(['board_overview', 'get_audit_log', 'get_board_diagnostics', 'get_edges', 'get_node', 'list_nodes'].sort()),
     readOnlyNames.join(','));
   check('every schema is closed (additionalProperties: false)',
     await page.evaluate(() => window.LivingEvidenceBoard.tools.every((t) => t.inputSchema.additionalProperties === false)));
+  const proposeNodeSchema = await page.evaluate(() => window.LivingEvidenceBoard.tools.find((t) => t.name === 'propose_node').inputSchema);
+  check('propose_node inputSchema is a discriminated oneOf, one branch per node type (D7)',
+    Array.isArray(proposeNodeSchema.oneOf) && proposeNodeSchema.oneOf.length === 5
+    && proposeNodeSchema.oneOf.every((b) => b.properties && b.properties.type),
+    JSON.stringify(proposeNodeSchema));
+  const evidenceBranch = proposeNodeSchema.oneOf.find((b) => b.properties.type.const === 'evidence');
+  check('the evidence branch requires value/year/kind/cited_as/quote and accepts optional quote_origin/source_locator',
+    ['value', 'year', 'kind', 'cited_as', 'quote'].every((f) => evidenceBranch.required.includes(f))
+    && 'quote_origin' in evidenceBranch.properties && 'source_locator' in evidenceBranch.properties
+    && !evidenceBranch.required.includes('quote_origin') && !evidenceBranch.required.includes('source_locator'),
+    JSON.stringify(evidenceBranch));
   const agentStatus = await page.evaluate(() => window.LivingEvidenceBoard.state.agent);
   check('WebMCP absent in the test browser, handled gracefully', agentStatus.active === false, JSON.stringify(agentStatus));
   check('registration status is explicitly "absent" (not a silent false)', agentStatus.status === 'absent', JSON.stringify(agentStatus));
@@ -125,7 +147,7 @@ try {
     JSON.stringify(nodeTypeCounts) === JSON.stringify({ hypothesis: 2, mechanism: 4, claim: 8, evidence: 23, question: 3 }),
     JSON.stringify(nodeTypeCounts));
   const edgeCount = await page.locator('#board-map .atlas-edges .atlas-edge').count();
-  check('43 seed edges rendered (incl. the five v1-ruling evidence→hypothesis edges)', edgeCount === 43, String(edgeCount));
+  check('41 seed edges rendered (D4: ed35 and ed43 removed, 43 -> 41)', edgeCount === 41, String(edgeCount));
   check('every node is keyboard reachable with an aria-label',
     await page.evaluate(() => [...document.querySelectorAll('[data-node]')].every((el) => el.getAttribute('tabindex') === '0' && el.getAttribute('role') === 'button' && (el.getAttribute('aria-label') || '').length > 5)));
   check('boot row is ledgered as the system', (await audit())[0].actor === 'system', JSON.stringify((await audit())[0]));
@@ -141,61 +163,72 @@ try {
     listedEvidence.nodes.every((n) => typeof n.quote === 'string' && n.quote.length > 0 && typeof n.cited_as === 'string' && n.cited_as.length > 0 && n.verification === SEED_VERIFICATION_LABEL),
     JSON.stringify(listedEvidence.nodes.find((n) => !n.quote || !n.cited_as || n.verification !== SEED_VERIFICATION_LABEL)));
 
+  // [D4] Every remaining supports/contradicts SEED edge (not the live active
+  // set, which will pick up e2e's own edgeless-rationale proposals below)
+  // must carry a nonempty rationale.
+  const seedRationaleOffenders = SEED.edges.filter((e) => (e.type === 'supports' || e.type === 'contradicts') && (!e.rationale || !e.rationale.trim()));
+  check('every supports/contradicts SEED edge has a nonempty rationale (D4)', seedRationaleOffenders.length === 0, JSON.stringify(seedRationaleOffenders.map((e) => e.id)));
+
   const byId = new Map(SEED.nodes.map((n) => [n.id, n]));
   const typeOf = (id) => byId.get(id)?.type;
   const nodeIncome = await call('get_node', { node_id: 'c-income' });
   const expectIncome = computeTally('c-income', SEED.edges, typeOf);
-  check('c-income tally matches the independent node-side recomputation',
-    nodeIncome.tally_status === expectIncome.status && nodeIncome.tally_supports === expectIncome.supports && nodeIncome.tally_contradicts === expectIncome.contradicts,
-    JSON.stringify({ page: [nodeIncome.tally_status, nodeIncome.tally_supports, nodeIncome.tally_contradicts], node: [expectIncome.status, expectIncome.supports, expectIncome.contradicts] }));
-  check('c-income is contested (>=2 supports AND >=1 contradict — spec §7 verbatim)',
-    nodeIncome.tally_status === 'contested' && nodeIncome.tally_supports >= 2 && nodeIncome.tally_contradicts >= 1, JSON.stringify(nodeIncome));
+  check('c-income evidence_edge_state matches the independent node-side recomputation',
+    nodeIncome.evidence_edge_state === expectIncome.state && nodeIncome.tally_supports === expectIncome.supports && nodeIncome.tally_contradicts === expectIncome.contradicts,
+    JSON.stringify({ page: [nodeIncome.evidence_edge_state, nodeIncome.tally_supports, nodeIncome.tally_contradicts], node: [expectIncome.state, expectIncome.supports, expectIncome.contradicts] }));
+  check('c-income is mixed (>=1 support AND >=1 contradict — D2 four-state scheme)',
+    nodeIncome.evidence_edge_state === 'mixed' && nodeIncome.tally_supports >= 1 && nodeIncome.tally_contradicts >= 1, JSON.stringify(nodeIncome));
   const nodeGap = await call('get_node', { node_id: 'c-gap' });
   const expectGap = computeTally('c-gap', SEED.edges, typeOf);
-  check('c-gap tally matches the independent recomputation and is supported',
-    nodeGap.tally_status === 'supported' && nodeGap.tally_status === expectGap.status && nodeGap.tally_supports === expectGap.supports,
+  check('c-gap evidence_edge_state matches the independent recomputation and is support_only',
+    nodeGap.evidence_edge_state === 'support_only' && nodeGap.evidence_edge_state === expectGap.state && nodeGap.tally_supports === expectGap.supports,
     JSON.stringify(nodeGap));
   check('claim tallies carry the bookkeeping scope, verbatim', nodeIncome.tally_scope === TALLY_SCOPE, nodeIncome.tally_scope);
-  // a claim with zero evidence edges (proposed fresh, no edges yet) must read unsupported
+  // a claim with zero evidence edges (proposed fresh, no edges yet) must read "none"
   const freshClaim = await call('propose_node', { type: 'claim', label: 'e2e スポットチェック用の新規クレーム', statement: 'このクレームは意図的にどのエッジも持たない。' });
   await page.locator(`#le-pending-node-${freshClaim.node_id} .le-btn-approve`).click();
   await page.waitForTimeout(100);
   const freshDetail = await call('get_node', { node_id: freshClaim.node_id });
-  check('a fresh, edge-less claim reads as unsupported (0/0)',
-    freshDetail.tally_status === 'unsupported' && freshDetail.tally_supports === 0 && freshDetail.tally_contradicts === 0, JSON.stringify(freshDetail));
+  check('a fresh, edge-less claim reads as "none" (0/0)',
+    freshDetail.evidence_edge_state === 'none' && freshDetail.tally_supports === 0 && freshDetail.tally_contradicts === 0, JSON.stringify(freshDetail));
   // clean up: reject is not possible post-approval, so just leave it — it is inert
   // (zero edges, not part of any other assertion) and does not affect the counts below.
 
   // ======================================================================= 2b
-  console.log('\n# 2b. GOLDEN per-claim tally map — literals transcribed from spec §6, independent of the page AND the seed module');
+  console.log('\n# 2b. GOLDEN per-claim tally map — literals transcribed from spec §6 (as amended by D4), independent of the page AND the seed module');
   // These are bare literals, NOT derived from data/housewife-board-seed.js —
   // if the seed disagrees with these numbers, the SEED is wrong, not this
   // map (BOARD-SPEC.md §7). Only evidence->claim edges feed a claim's tally
-  // (claim->hypothesis and the v1-ruling evidence->hypothesis edges do not),
-  // so these counts are unaffected by the five edges B1 added.
+  // (claim->hypothesis and the evidence->hypothesis v1-ruling edges do not),
+  // so D4's removal of ed35 (claim->hypothesis) and ed43 (evidence->
+  // hypothesis) does not change a single one of these numbers — only their
+  // STATE NAMES changed under D2 (supported/contested -> support_only/mixed).
   const GOLDEN_TALLY = {
-    'c-gap': { status: 'supported', supports: 1, contradicts: 0 },
-    'c-marriage': { status: 'contested', supports: 5, contradicts: 1 },
-    'c-income': { status: 'contested', supports: 2, contradicts: 1 },
-    'c-grandparent': { status: 'supported', supports: 3, contradicts: 0 },
-    'c-commute': { status: 'supported', supports: 3, contradicts: 0 },
-    'c-values': { status: 'supported', supports: 2, contradicts: 0 },
-    'c-notonly': { status: 'supported', supports: 1, contradicts: 0 },
-    'c-industry': { status: 'supported', supports: 2, contradicts: 0 },
+    'c-gap': { state: 'support_only', supports: 1, contradicts: 0 },
+    'c-marriage': { state: 'mixed', supports: 5, contradicts: 1 },
+    'c-income': { state: 'mixed', supports: 2, contradicts: 1 },
+    'c-grandparent': { state: 'support_only', supports: 3, contradicts: 0 },
+    'c-commute': { state: 'support_only', supports: 3, contradicts: 0 },
+    'c-values': { state: 'support_only', supports: 2, contradicts: 0 },
+    'c-notonly': { state: 'support_only', supports: 1, contradicts: 0 },
+    'c-industry': { state: 'support_only', supports: 2, contradicts: 0 },
   };
-  const GOLDEN_CONTESTED = Object.entries(GOLDEN_TALLY).filter(([, g]) => g.status === 'contested').map(([id]) => id).sort();
-  check('the golden contested set is exactly {c-income, c-marriage} (sanity on the literal itself)',
-    JSON.stringify(GOLDEN_CONTESTED) === JSON.stringify(['c-income', 'c-marriage'].sort()), JSON.stringify(GOLDEN_CONTESTED));
+  const GOLDEN_MIXED = Object.entries(GOLDEN_TALLY).filter(([, g]) => g.state === 'mixed').map(([id]) => id).sort();
+  check('the golden mixed set is exactly {c-income, c-marriage} (sanity on the literal itself)',
+    JSON.stringify(GOLDEN_MIXED) === JSON.stringify(['c-income', 'c-marriage'].sort()), JSON.stringify(GOLDEN_MIXED));
+  const GOLDEN_CONTRADICTION_ONLY = Object.entries(GOLDEN_TALLY).filter(([, g]) => g.state === 'contradiction_only').map(([id]) => id).sort();
+  check('the golden contradiction_only set is exactly {} — no seed claim reaches this state (sanity on the literal itself)',
+    JSON.stringify(GOLDEN_CONTRADICTION_ONLY) === JSON.stringify([]), JSON.stringify(GOLDEN_CONTRADICTION_ONLY));
   const claimList2b = await call('list_nodes', { type: 'claim' });
   for (const [cid, golden] of Object.entries(GOLDEN_TALLY)) {
     const n = claimList2b.nodes.find((x) => x.id === cid);
-    check(`${cid} tally matches the GOLDEN map (${golden.status} ${golden.supports}+/${golden.contradicts}−)`,
-      !!n && n.tally_status === golden.status && n.tally_supports === golden.supports && n.tally_contradicts === golden.contradicts,
+    check(`${cid} evidence_edge_state matches the GOLDEN map (${golden.state} ${golden.supports}+/${golden.contradicts}−)`,
+      !!n && n.evidence_edge_state === golden.state && n.tally_supports === golden.supports && n.tally_contradicts === golden.contradicts,
       JSON.stringify(n));
   }
 
   // ======================================================================= 2c
-  console.log('\n# 2c. GOLDEN seed evidence values + the five v1-ruling evidence→hypothesis edges');
+  console.log('\n# 2c. GOLDEN seed evidence values + the FOUR remaining v1-ruling evidence→hypothesis edges');
   const eMukyo = await call('get_node', { node_id: 'e-mukyo' });
   check('e-mukyo value carries 26.4 and 7.3', eMukyo.value.includes('26.4') && eMukyo.value.includes('7.3'), eMukyo.value);
   check('e-mukyo year is 2022', eMukyo.year === 2022, String(eMukyo.year));
@@ -206,6 +239,11 @@ try {
   const e1995 = await call('get_node', { node_id: 'e-1995' });
   check('e-1995 year is 1995 and value carries 50.4 and 31.1',
     e1995.year === 1995 && e1995.value.includes('50.4') && e1995.value.includes('31.1'), JSON.stringify([e1995.year, e1995.value]));
+  check('e-1995 label reflects it is a conversation-reported figure (D3)', e1995.label === '1995年の専業主婦率（会話記載）', e1995.label);
+  check('e-1995 quote is EXACTLY the new full verbatim sentence (D3)',
+    e1995.quote === 'なんと1995年国勢調査でも、有配偶女性の専業主婦率は、東京 50.4% 福井 31.1%でした。', e1995.quote);
+  check('e-1995 statement flags the indicator definition and primary table as unconfirmed (D3)',
+    /指標定義と国勢調査の一次表は未確認/.test(e1995.statement), e1995.statement);
   const eKyuyo = await call('get_node', { node_id: 'e-kyuyo' });
   check('e-kyuyo quote is EXACTLY the canonical placeholder (not a fabricated citation)',
     eKyuyo.quote === '（会話中の比較表に数値のみが記載され、引用可能な地の文は与えられていない）', eKyuyo.quote);
@@ -216,59 +254,97 @@ try {
   check('e-mikonritsu supports h-selection (v1-ruling edge)', hasEdge('e-mikonritsu', 'h-selection', 'supports'));
   check('e-kyuyo supports h-selection (v1-ruling edge)', hasEdge('e-kyuyo', 'h-selection', 'supports'));
   check('e-ishiki supports h-model (v1-ruling edge)', hasEdge('e-ishiki', 'h-model', 'supports'));
-  check('e-1995 contradicts h-selection (v1-ruling edge)', hasEdge('e-1995', 'h-selection', 'contradicts'));
+  check('e-1995 -> h-selection contradicts edge is ABSENT (D4: ed43 removed)', !hasEdge('e-1995', 'h-selection', 'contradicts'));
   const activeEdgeCount2c = edges2c.edges.filter((e) => e.status === 'active').length;
-  check('43 active seed edges (38 + the five v1-ruling edges)', activeEdgeCount2c === 43, String(activeEdgeCount2c));
+  check('41 active seed edges (37 + the FOUR remaining v1-ruling edges)', activeEdgeCount2c === 41, String(activeEdgeCount2c));
+
+  // [D4/D13] ed35 (c-notonly -> h-selection, contradicts) is also gone —
+  // verify structurally via get_edges on h-selection: it must carry NO
+  // contradicts edges at all any more.
+  const hSelectionEdges = await call('get_edges', { node_id: 'h-selection' });
+  const hSelectionContradicts = hSelectionEdges.edges.filter((e) => e.to === 'h-selection' && e.type === 'contradicts');
+  check('h-selection has ZERO incoming contradicts edges (ed35 and ed43 both removed, D4)',
+    hSelectionContradicts.length === 0, JSON.stringify(hSelectionContradicts));
 
   // ======================================================================= 3
-  console.log('\n# 3. get_discoveries — bookkeeping, not truth language');
-  const disc = await call('get_discoveries', {});
-  const nodeDisc = computeDiscoveries(SEED.nodes, SEED.edges);
-  check('contested_claims includes c-income (matches node-side computeDiscoveries)',
-    disc.contested_claims.includes('c-income'), JSON.stringify(disc.contested_claims));
+  console.log('\n# 3. get_board_diagnostics — bookkeeping, not truth language (renamed from get_discoveries, D1)');
+  const diag = await call('get_board_diagnostics', {});
+  const nodeDiag = computeBoardDiagnostics(SEED.nodes, SEED.edges);
+  const idsOf = (arr) => arr.map((x) => x.id);
+  check('claims_with_mixed_edge_labels includes c-income (matches node-side computeBoardDiagnostics)',
+    idsOf(diag.claims_with_mixed_edge_labels).includes('c-income'), JSON.stringify(diag.claims_with_mixed_edge_labels));
+  check('every entry in claims_with_mixed_edge_labels carries id/label/support_count/contradict_count (D1 enriched shape)',
+    diag.claims_with_mixed_edge_labels.every((x) => typeof x.id === 'string' && typeof x.label === 'string' && Number.isFinite(x.support_count) && Number.isFinite(x.contradict_count)),
+    JSON.stringify(diag.claims_with_mixed_edge_labels));
   // Sorted-set EQUALITY against the GOLDEN set from block 2b, not a subset
-  // check — the fresh block-2 claim is unsupported (not contested), so
-  // equality against the golden {c-income, c-marriage} holds exactly.
-  check('contested_claims is EXACTLY {c-income, c-marriage} (sorted-set equality vs the golden)',
-    JSON.stringify(disc.contested_claims.slice().sort()) === JSON.stringify(GOLDEN_CONTESTED),
-    JSON.stringify({ page: disc.contested_claims, golden: GOLDEN_CONTESTED }));
-  check('unsupported_claims includes the freshly approved edge-less claim',
-    disc.unsupported_claims.includes(freshClaim.node_id), JSON.stringify(disc.unsupported_claims));
-  const GOLDEN_SINGLE_SOURCE = ['c-gap', 'c-values', 'c-notonly', 'c-industry'].sort();
-  check('single_source_claims is EXACTLY the golden set (sorted-set equality)',
-    JSON.stringify(disc.single_source_claims.slice().sort()) === JSON.stringify(GOLDEN_SINGLE_SOURCE),
-    JSON.stringify({ page: disc.single_source_claims, golden: GOLDEN_SINGLE_SOURCE }));
-  check('untested_hypotheses matches the seed (both hypotheses are tested)',
-    JSON.stringify(disc.untested_hypotheses) === JSON.stringify(nodeDisc.untested_hypotheses), JSON.stringify(disc.untested_hypotheses));
+  // check — the fresh block-2 claim is "none" (not mixed), so equality
+  // against the golden {c-income, c-marriage} holds exactly.
+  check('claims_with_mixed_edge_labels is EXACTLY {c-income, c-marriage} (sorted-set equality vs the golden)',
+    JSON.stringify(idsOf(diag.claims_with_mixed_edge_labels).slice().sort()) === JSON.stringify(GOLDEN_MIXED),
+    JSON.stringify({ page: idsOf(diag.claims_with_mixed_edge_labels), golden: GOLDEN_MIXED }));
+  check('claims_with_contradiction_only_edges is EXPLICITLY EMPTY on the seed (D1/D13 — the NEW state no seed claim reaches)',
+    Array.isArray(diag.claims_with_contradiction_only_edges) && diag.claims_with_contradiction_only_edges.length === 0,
+    JSON.stringify(diag.claims_with_contradiction_only_edges));
+  check('claims_without_incoming_evidence_edges includes the freshly approved edge-less claim',
+    idsOf(diag.claims_without_incoming_evidence_edges).includes(freshClaim.node_id), JSON.stringify(diag.claims_without_incoming_evidence_edges));
+  const GOLDEN_SINGLE_CITATION = ['c-gap', 'c-values', 'c-notonly', 'c-industry'].sort();
+  check('single_supporting_citation_label_claims is EXACTLY the golden set (sorted-set equality)',
+    JSON.stringify(idsOf(diag.single_supporting_citation_label_claims).slice().sort()) === JSON.stringify(GOLDEN_SINGLE_CITATION),
+    JSON.stringify({ page: idsOf(diag.single_supporting_citation_label_claims), golden: GOLDEN_SINGLE_CITATION }));
+  check('single_supporting_citation_label_claims entries show a nonempty cited_as and their evidence_ids (D1 enriched shape)',
+    diag.single_supporting_citation_label_claims.every((x) => typeof x.cited_as === 'string' && x.cited_as.trim().length > 0 && Array.isArray(x.evidence_ids) && x.evidence_ids.length > 0),
+    JSON.stringify(diag.single_supporting_citation_label_claims));
+  check('single_supporting_citation_label_scope names the string-identity caveat, not a source-independence claim',
+    /string-identity/.test(diag.single_supporting_citation_label_scope) && /NOT a source-independence/.test(diag.single_supporting_citation_label_scope),
+    diag.single_supporting_citation_label_scope);
+  check('hypotheses_without_linked_test_questions matches the seed (both hypotheses are covered)',
+    JSON.stringify(idsOf(diag.hypotheses_without_linked_test_questions)) === JSON.stringify(idsOf(nodeDiag.hypotheses_without_linked_test_questions)), JSON.stringify(diag.hypotheses_without_linked_test_questions));
+  check('hypotheses_without_linked_test_questions_scope names test-PLAN coverage, not tests performed',
+    /test-plan coverage/.test(diag.hypotheses_without_linked_test_questions_scope) && /not tests performed/.test(diag.hypotheses_without_linked_test_questions_scope),
+    diag.hypotheses_without_linked_test_questions_scope);
   check('open_questions lists all 3 seed questions with their tested targets',
-    disc.open_questions.length === 3
-    && disc.open_questions.find((q) => q.question_id === 'q-decompose').targets.includes('h-selection')
-    && disc.open_questions.find((q) => q.question_id === 'q-share').targets.includes('h-model'),
-    JSON.stringify(disc.open_questions));
-  check('unverified_evidence_count is 23 (every seed evidence node)', disc.unverified_evidence_count === 23, String(disc.unverified_evidence_count));
-  check('a note is present and names bookkeeping, not truth', /bookkeeping/.test(disc.note) && !/is true|is false|proven|disproven/i.test(disc.note), disc.note);
-  check('discoveries carry the tally scope disclaimer', disc.tally_scope === TALLY_SCOPE, disc.tally_scope);
-  check('the discoveries panel on the page renders the same note', (await page.textContent('#board-discoveries')).includes(disc.note));
-  check('no truth-adjudication language anywhere in the rendered discoveries panel',
+    diag.open_questions.length === 3
+    && diag.open_questions.find((q) => q.question_id === 'q-decompose').targets.includes('h-selection')
+    && diag.open_questions.find((q) => q.question_id === 'q-share').targets.includes('h-model'),
+    JSON.stringify(diag.open_questions));
+  check('unverified_evidence_count is 23 (every evidence node — seed and human-approved alike, D6)', diag.unverified_evidence_count === 23, String(diag.unverified_evidence_count));
+  check('a note is present and names bookkeeping, not truth', /bookkeeping/.test(diag.note) && !/is true|is false|proven|disproven/i.test(diag.note), diag.note);
+  check('diagnostics carry the tally scope disclaimer', diag.tally_scope === TALLY_SCOPE, diag.tally_scope);
+  check('the diagnostics panel on the page renders the same note', (await page.textContent('#board-discoveries')).includes(diag.note));
+  check('no truth-adjudication language anywhere in the rendered diagnostics panel',
     !/\b(is true|is false|proven|disproven|confirmed to be)\b/i.test(await page.textContent('#board-discoveries')));
 
   // ======================================================================= 4
-  console.log('\n# 4. propose_node / propose_edge — validation, approval, matrix enforcement');
+  console.log('\n# 4. propose_node / propose_edge — validation, approval, matrix enforcement, duplicate rejection');
   const noQuote = await callErr('propose_node', { type: 'evidence', label: '引用なしテスト', statement: '引用なしで提案されたテスト証拠。', value: 'x', year: 2026, kind: 'survey', cited_as: 'テスト出典' });
-  check('propose_node evidence without a quote errors, naming the field', /quote/.test(noQuote || ''), noQuote);
+  check('propose_node evidence without a quote fails, naming the field the schema\'s evidence oneOf branch requires (D7)', /quote/.test(noQuote || ''), noQuote);
   const badEdgeShape = await callErr('propose_edge', { from: 'e-mukyo', to: 'e-tfr', type: 'supports' });
-  check('evidence -> evidence is rejected by the matrix, naming it',
-    /not allowed by the validity matrix/.test(badEdgeShape || '') && /evidence→claim/.test(badEdgeShape || ''), badEdgeShape);
+  check('evidence -> evidence is rejected by the endpoint/type compatibility matrix, naming it (D5)',
+    /not allowed by the endpoint\/type compatibility matrix/.test(badEdgeShape || '') && /evidence→claim/.test(badEdgeShape || ''), badEdgeShape);
+
+  // [D11] An exact (from,to,type) duplicate of an ACTIVE seed edge is
+  // REJECTED outright — ed06 (e-mukyo -> c-gap, supports) already exists.
+  const dupEdge = await callErr('propose_edge', { from: 'e-mukyo', to: 'c-gap', type: 'supports' });
+  check('propose_edge REJECTS an exact duplicate of an active edge, naming it (D11, was: flagged)',
+    /duplicate edge/.test(dupEdge || '') && /e-mukyo/.test(dupEdge || '') && /c-gap/.test(dupEdge || ''), dupEdge);
 
   const versionBefore4 = await boardVersion();
   const rowsBefore4 = await ledgerRows();
   const propNode = await call('propose_node', {
     type: 'evidence', label: 'e2e追加証拠', statement: 'e2eテストで提案された新規証拠。',
     value: 'テスト値42%', year: 2026, kind: 'survey', cited_as: 'e2eテスト出典', quote: 'これはe2eテストの引用文である',
+    source_locator: '会話ログの中盤',
   });
   check('a valid propose_node returns pending_human_approval', propNode.status === 'pending_human_approval', JSON.stringify(propNode));
   check('a pending-node card is rendered', await page.locator(`#le-pending-node-${propNode.node_id}`).count() === 1);
   check('the pending section becomes visible', await page.locator('#pending-section.le-has-pending, #pending-section:has(.le-pending-card)').count() >= 1);
+  const pendingDetail = await call('get_node', { node_id: propNode.node_id });
+  check('quote_origin defaults to "conversation" when omitted, stored on provenance (D7)',
+    pendingDetail.provenance?.quote_origin === 'conversation', JSON.stringify(pendingDetail.provenance));
+  check('source_locator is stored on provenance when supplied (D7)',
+    pendingDetail.provenance?.source_locator === '会話ログの中盤', JSON.stringify(pendingDetail.provenance));
+  check('a still-pending evidence node has no verification label yet (stamped only on approval, D6)',
+    pendingDetail.verification == null, JSON.stringify(pendingDetail.verification));
   // propose_edge from a still-PENDING node must be refused — an edge can only
   // point at something already on the board (seed or previously approved).
   const notYetOnBoard = await callErr('propose_edge', { from: propNode.node_id, to: 'c-income', type: 'supports' });
@@ -280,20 +356,23 @@ try {
   check('board_version bumped after the node approval', (await boardVersion()) === versionBefore4 + 1, `${versionBefore4} -> ${await boardVersion()}`);
   check('the node no longer appears pending', await page.locator(`#le-pending-node-${propNode.node_id}`).count() === 0);
   check('the approved evidence node is now drawn on the map', await page.locator(`[data-node="${propNode.node_id}"]`).count() === 1);
+  const approvedEvidence = await call('get_node', { node_id: propNode.node_id });
+  check('an approved evidence node gets the D6 session-proposed verification label',
+    approvedEvidence.verification === '(proposed this session — not independently verified)', approvedEvidence.verification);
 
   const versionBeforeEdge = await boardVersion();
-  const propEdge2 = await call('propose_edge', { from: propNode.node_id, to: 'c-income', type: 'supports' });
+  const propEdge2 = await call('propose_edge', { from: propNode.node_id, to: 'c-income', type: 'supports', rationale: 'e2eテスト用の根拠。' });
   check('propose_edge now succeeds once its "from" node is approved', propEdge2.status === 'pending_human_approval', JSON.stringify(propEdge2));
   const incomeBefore = await call('get_node', { node_id: 'c-income' });
   await page.locator(`#le-pending-edge-${propEdge2.edge_id} .le-btn-approve`).click();
   await page.waitForTimeout(100);
   check('board_version bumped again after the edge approval', (await boardVersion()) === versionBeforeEdge + 1, `${versionBeforeEdge} -> ${await boardVersion()}`);
   const incomeAfter = await call('get_node', { node_id: 'c-income' });
-  check('c-income\'s tally recomputed to reflect the newly approved supporting edge',
+  check('c-income\'s evidence_edge_state recomputed to reflect the newly approved supporting edge',
     incomeAfter.tally_supports === incomeBefore.tally_supports + 1, `${incomeBefore.tally_supports} -> ${incomeAfter.tally_supports}`);
-  const discAfter4 = await call('get_discoveries', {});
-  check('get_discoveries reflects the new evidence node in the unverified count (unchanged: freshly proposed evidence is NOT seed-unverified)',
-    discAfter4.unverified_evidence_count === 23, String(discAfter4.unverified_evidence_count));
+  const diagAfter4 = await call('get_board_diagnostics', {});
+  check('get_board_diagnostics reflects the new evidence node in the unverified count (unchanged: every evidence node counts, D6)',
+    diagAfter4.unverified_evidence_count === 24, String(diagAfter4.unverified_evidence_count));
   check('ledger gained rows for both approvals', (await ledgerRows()) > rowsBefore4);
 
   // ======================================================================= 5
@@ -361,8 +440,8 @@ try {
   check('default export omits the json payload', !('json' in exp1), JSON.stringify(Object.keys(exp1)));
   check('default export carries the receipt shape', typeof exp1.filename === 'string' && Number.isFinite(exp1.bytes) && typeof exp1.download_started === 'boolean' && /^[0-9a-f]{8}$/.test(exp1.content_digest), JSON.stringify(exp1));
   const exp2 = await call('export_board', { include_json: true });
-  check('include_json:true adds the json payload with nodes/edges/discoveries/audit_log',
-    exp2.json && Array.isArray(exp2.json.nodes) && Array.isArray(exp2.json.edges) && exp2.json.discoveries && Array.isArray(exp2.json.audit_log),
+  check('include_json:true adds the json payload with nodes/edges/diagnostics/audit_log (renamed from discoveries, D1)',
+    exp2.json && Array.isArray(exp2.json.nodes) && Array.isArray(exp2.json.edges) && exp2.json.diagnostics && Array.isArray(exp2.json.audit_log),
     JSON.stringify(Object.keys(exp2.json || {})));
   // block 5's corrupt-snapshot step reset the board to the clean 40-node seed
   // (that reset IS the point of block 5) — export reflects that clean state.
@@ -372,7 +451,7 @@ try {
   console.log('\n# 7. id normalization, focus/Escape/aria, no scroll hijack');
   const bareGet = await call('get_node', { node_id: 'c-income' });
   const typedGet = await call('get_node', { node_id: 'claim:c-income' });
-  check('bare and typed node ids resolve to the same node', bareGet.id === typedGet.id && bareGet.tally_status === typedGet.tally_status, JSON.stringify([bareGet.id, typedGet.id]));
+  check('bare and typed node ids resolve to the same node', bareGet.id === typedGet.id && bareGet.evidence_edge_state === typedGet.evidence_edge_state, JSON.stringify([bareGet.id, typedGet.id]));
   const focus1 = await call('focus_node', { node_id: 'hypothesis:h-selection' });
   check('focus_node accepts the typed id form', focus1.node_id === 'h-selection' && focus1.bare_id === 'h-selection', JSON.stringify(focus1));
   check('the focused node carries the selection ring', await page.locator('[data-node="h-selection"].atlas-selected').count() === 1);
@@ -427,7 +506,7 @@ try {
   check('a click on empty map background deselects too', await page.locator('.atlas-selected').count() === 0);
 
   // ======================================================================= 8
-  console.log('\n# 8. ledger envelope, actor attribution, pure reads unledgered');
+  console.log('\n# 8. ledger envelope, actor attribution, pure reads unledgered, board_overview contract');
   const REQUIRED_KEYS = ['run', 'time', 'actor', 'kind', 'tool', 'inputs', 'summary', 'board_version', 'result_digest'];
   // Fresh activity for this block's own attribution check — block 5's
   // corrupt-snapshot recovery deliberately wiped the ledger down to its boot
@@ -447,7 +526,7 @@ try {
   await call('list_nodes', {});
   await call('get_node', { node_id: 'c-income' });
   await call('get_edges', {});
-  await call('get_discoveries', {});
+  await call('get_board_diagnostics', {});
   await call('get_audit_log', {});
   check('all six read tools ledger nothing', (await audit()).length === auditBefore8 && (await ledgerRows()) === rowsBefore8, `${auditBefore8} -> ${(await audit()).length}`);
   const logTool = await call('get_audit_log', {});
@@ -459,9 +538,35 @@ try {
     /non-cryptographic FNV-1a checksum/.test(auditDesc) && /not tamper evidence/.test(auditDesc) && /session-local/.test(auditDesc), auditDesc);
   const overview8 = await call('board_overview', {});
   check('board_overview states the tally-bookkeeping scope', overview8.tally_scope === TALLY_SCOPE, overview8.tally_scope);
-  check('board_overview places the page in the suite and suggests a flow',
+  check('board_overview places the page in the suite, INCLUDING its own board line (D10)',
     overview8.suite_context.you_are_here === 'board' && /index\.html/.test(overview8.suite_context.exemplar) && /atlas\.html/.test(overview8.suite_context.atlas)
-    && Array.isArray(overview8.suggested_flow) && overview8.suggested_flow.length >= 3, JSON.stringify(overview8.suggested_flow));
+    && /board\.html/.test(overview8.suite_context.board) && /does not propagate/.test(overview8.suite_context.board),
+    JSON.stringify(overview8.suite_context));
+  check('board_overview.suggested_flow is the fixed five-step sequence (D8): propose -> approve node -> propose edge -> approve edge -> diagnostics again',
+    Array.isArray(overview8.suggested_flow) && overview8.suggested_flow.length >= 3, JSON.stringify(overview8.suggested_flow));
+  // [D8/D13] The pre-fix flow had ONE step that named both propose_node and
+  // propose_edge together ("propose_node / propose_edge with a quote — the
+  // human approves") — an agent following it literally would call
+  // propose_edge on a node that isn't approved yet and hit an error. No
+  // single step string may combine the two verbs any more, and whichever
+  // step first mentions propose_edge must come AFTER a step that says to
+  // approve the node.
+  const flowStrings = overview8.suggested_flow;
+  check('no suggested_flow step proposes an edge in the same breath as proposing a node (D8, was broken)',
+    flowStrings.every((s) => !(/propose_node/.test(s) && /propose_edge/.test(s))), JSON.stringify(flowStrings));
+  const approveNodeStepIdx = flowStrings.findIndex((s) => /approve it/.test(s));
+  const proposeEdgeStepIdx = flowStrings.findIndex((s) => /propose_edge/.test(s));
+  check('the propose_edge step comes AFTER a step telling the agent to get the node approved first (D8)',
+    approveNodeStepIdx !== -1 && proposeEdgeStepIdx !== -1 && proposeEdgeStepIdx > approveNodeStepIdx,
+    JSON.stringify({ approveNodeStepIdx, proposeEdgeStepIdx, flowStrings }));
+  check('board_overview.suggested_fast_path is board_overview -> get_board_diagnostics -> focus_node (D8)',
+    JSON.stringify(overview8.suggested_fast_path) === JSON.stringify(['board_overview', 'get_board_diagnostics', 'focus_node {"node_id":"c-income"}']),
+    JSON.stringify(overview8.suggested_fast_path));
+  check('board_overview honesty text describes active edges, endpoint/type compatibility, and the reload/board_version contract (D5/D9/D12)',
+    overview8.honesty.some((s) => /endpoint\/type compatibility matrix/.test(s))
+    && overview8.honesty.some((s) => /human approval/.test(s) && /not.*approved in this session/.test(s))
+    && overview8.honesty.some((s) => /localStorage/.test(s) && /board_version increments ONLY/.test(s)),
+    JSON.stringify(overview8.honesty));
 
   // ======================================================================= 9
   console.log('\n# 9. no probes, no errors, screenshots');

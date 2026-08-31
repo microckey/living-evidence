@@ -18,7 +18,8 @@ When an AI reads a paper or a data report today, it scrapes prose and then
 *guesses at the arithmetic*. Executable-paper projects (Jupyter, Distill, eLife
 ERA, Quarto) attacked reproducibility **for human hands** — sliders and Run
 buttons, bounded by whatever UI the author scripted. The machine reader got
-nothing: there has never been a way for a visiting agent to *operate* a document.
+nothing: there has been no standard way for a visiting agent to *operate* a
+document.
 
 WebMCP changes that. A page can now hand typed tools to whatever agent the reader
 brings. Living Evidence uses this to make documents that can be **interrogated
@@ -36,10 +37,13 @@ instead of trusted**:
 
 Three design rules make this trustworthy rather than merely automated:
 
-1. **The page computes, the agent judges.** Every number comes from deterministic
-   page code (validated against R's `metafor`) — never from LLM arithmetic.
-2. **Nothing invisible.** Every tool call appends to a visible audit ledger;
-   analyses render figures into the Reader's Workbench.
+1. **The page computes, the agent judges.** Every derived statistic or
+   diagnostic comes from deterministic page code (the meta-analysis engine is
+   validated against R's `metafor`) — never from LLM arithmetic. Input
+   evidence keeps its provenance and verification label.
+2. **Nothing invisible.** Every analysis, verdict and mutation lands in a
+   visible, session-local audit ledger (pure reads stay tool responses);
+   analyses render figures into the page itself.
 3. **Humans own the evidence base.** Agents propose; humans approve.
 
 ## Try it
@@ -64,10 +68,25 @@ compiles the whole thing into one self-contained HTML file — a living document
 anyone else can cross-examine, no server required.
 
 **Explore the map** — open `atlas.html`: the same literature as a live
-evidence map. Ask your agent *"what's missing from this literature?"* — it
-calls `get_gaps`, and the answer (an empty 8–16-week band, computed from the
-data on the spot) lights up on the map you're looking at, with a study brief
-that names the design inputs a follow-up experiment would need.
+evidence map. Ask your agent *"what's missing here?"* — it calls `get_gaps`,
+and the answer (none of these nineteen records falls in the 8–16-week band,
+computed from the data on the spot) lights up on the map you're looking at.
+The collection frame is honestly marked unknown/not-searched — a coverage
+lead, not proof that no such study exists — and the study brief names the
+design inputs a follow-up experiment would need, computing no sample size
+from inputs that don't exist.
+
+**Board a research conversation** — open `board.html`: a messy, real ChatGPT
+research thread (a conversation-reported figure putting Tokyo's rate of
+non-working wives among school-age families at Japan's highest) restructured
+into two hypotheses, four mechanisms, eight claims, twenty-three evidence
+extracts and three questions that conversation left open. Every extract
+carries a verbatim conversation excerpt, its cited-source label, and an
+explicit *"not independently verified"* mark. The board's diagnostics
+describe the graph — which claims carry mixed edges, which have no evidence,
+which share a single citation label — bookkeeping over active edges, never
+truth adjudication. Agents extend it through the same propose→approve gate
+the exemplar and workspace use.
 
 **Locally**
 
@@ -82,7 +101,8 @@ python3 -m http.server 8501 --bind 127.0.0.1   # from the repo root
 |---|---|
 | `index.html` | The exemplar living meta-analysis (Pygmalion effect, 19 studies) |
 | `workspace.html` | The workspace: build your own evidence base with your agent (propose → approve → synthesize), then export it as a self-contained living document |
-| `atlas.html` | The mini-Atlas: the exemplar's literature as a live, read-only evidence map — cell, claims, records, and computed gaps (including the empty 8–16-week band no study ever sampled) |
+| `atlas.html` | The mini-Atlas: the exemplar's literature as a live, read-only evidence map — cell, claims, records, and computed gaps (including the 8–16-week band none of its nineteen records samples) |
+| `board.html` | The Evidence Board: a real ChatGPT research conversation restructured into hypotheses, claims, quote-carrying evidence extracts and open questions — one visual board with graph diagnostics, beyond the meta-analysis genre |
 | `lib/living-evidence.js` | Format runtime: WebMCP registration, 12-tool document / 15-tool workspace contract, structured audit ledger, claim badges, approval queue, persistence, single-file export, tool console |
 | `lib/meta-stats.js` | Dependency-free meta-analysis engine: REML/DL random effects, fixed effects, subgroups, meta-regression, leave-one-out, Egger’s test, cumulative MA |
 | `lib/meta-plots.js` | Theme-aware SVG forest / funnel / sensitivity / bubble plots |
@@ -122,7 +142,7 @@ executable code and data + **machine-addressable claims and agent tools**.
 
 eLife's Executable Research Articles proved the middle step was publishable — and
 showed why it stayed niche: supply without demand. Authoring cost was real, and
-human readers almost never rerun anything. Machine readers rerun constantly.
+human readers rarely rerun anything. Machine readers rerun constantly.
 **For an agent, reading is rerunning** — agents are the demand side executable
 publishing has been waiting for.
 

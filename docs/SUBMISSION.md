@@ -16,13 +16,13 @@ and paste at submission time. Placeholders marked ⟨…⟩.
 When an AI reads a paper, a data report, or a meta-analysis today, it scrapes
 prose — and then guesses at the arithmetic. The "executable papers" movement
 (Jupyter, Distill, eLife's Executable Research Articles) attacked this for
-*human* readers: sliders, Run buttons, notebooks. But the fastest-growing
-readership of documents is machines, and for them nothing changed.
+*human* readers: sliders, Run buttons, notebooks. But more and more of a
+document's readers are machines, and for them nothing changed.
 
 That movement's high-water mark, eLife's ERA, proved the supply side: narrative
 + code + data + in-browser re-execution, published for real. It stayed niche
 because the demand side was missing — authoring costs something, and human
-readers almost never rerun anything. Machine readers rerun constantly. **For an agent, reading is
+readers rarely rerun anything. Machine readers rerun constantly. **For an agent, reading is
 rerunning.** Agents are the demand side that executable publishing has been
 waiting for.
 
@@ -38,13 +38,19 @@ authoring template) and one full **exemplar**: a living meta-analysis of the
 Pygmalion effect — *Do teacher expectations raise students' IQ?* — carrying all
 19 classic experiments as data, not citations.
 
-Open it with your agent (ChatGPT's built-in browser, or Chrome with WebMCP) and:
+Four pages ship: the exemplar document, the authoring workspace, a read-only
+literature Atlas, and the Evidence Board (12 / 15 / 10 / 11 WebMCP tools
+respectively, each JSON-schema'd with read-only annotations where they apply).
+Open them with your agent (ChatGPT's built-in browser, or Chrome with WebMCP)
+and:
 
 - **Claims are addressable and machine-checkable.** Ask your agent to test the
   textbook claim that "raising expectations makes children smarter" — it calls
   `evaluate_claim`, a deterministic check runs *in the page*, and a ✗ challenged
-  badge appears in the prose, live. (The claim that survives is stranger: the
-  effect exists only in the narrow window before teachers know their pupils.)
+  badge appears in the prose, live. (The claim that survives is stranger: in
+  these nineteen experiments the effect shows up only where teachers barely
+  knew their pupils — a study-level association under an authored model, not
+  a proven causal window; the document says exactly that about itself.)
 - **Analyses the author never scripted.** "Re-run it without the two outliers"
   becomes `run_meta_analysis {exclude: [...]}` — forest plots, leave-one-out,
   subgroups, meta-regression, funnel/Egger diagnostics all render into the
@@ -60,20 +66,37 @@ Open it with your agent (ChatGPT's built-in browser, or Chrome with WebMCP) and:
   agent can do is hidden from you.
 - **Reading compiles into publishing.** The companion **workspace** is an
   empty document of the same format: your agent proposes studies from papers
-  you give it (source + verbatim quote required, approval bound to a record
-  hash), you approve each one, claims get declarative machine checks — and
+  you give it (source + verbatim quote required; each approval pinned to a
+  drift-detecting checksum of the record), you approve each one, claims get
+  declarative machine checks — and
   `export_document` compiles the whole thing into a single self-contained
   HTML file: a living document anyone else can cross-examine, no server
   required.
 - **The map computes what's missing.** The **mini-Atlas** indexes the
   exemplar's literature as a live evidence map — the estimand cell, six
   machine-checkable claims, nineteen records, and **gaps computed from the
-  data itself**: the 8–16-week band of prior teacher–pupil contact that no
-  study has ever sampled, surfaced live with a study-brief card that lists
-  the design inputs an experiment would need — filled where the evidence can
-  fill them, named as unresolved where it can't, and deliberately computing
-  **no** sample size from inputs that don't exist. Your agent explores it
-  through tools; every probe lights up on the map you're looking at.
+  data itself**: none of the nineteen records samples the 8–16-week band of
+  prior teacher–pupil contact (the collection frame is honestly marked
+  unknown/not-searched — a coverage lead, not proof no such study exists),
+  surfaced live with a study-brief card that lists the design inputs an
+  experiment would need — filled where the evidence can fill them, named as
+  unresolved where it can't, and deliberately computing **no** sample size
+  from inputs that don't exist. Your agent explores it through tools; every
+  probe lights up on the map you're looking at.
+- **It isn't just meta-analysis.** The **Evidence Board** takes a real, messy
+  ChatGPT research conversation (a conversation-reported figure putting
+  Tokyo's rate of non-working wives among school-age families at Japan's
+  highest) and restructures it into the format: two hypotheses, eight
+  claims, twenty-three evidence extracts — every one carrying a verbatim
+  conversation excerpt, its cited-source label, and an explicit *"not
+  independently verified"* mark — plus the three questions that conversation
+  left open. The board's diagnostics report graph structure: which claims
+  carry **mixed** support-and-contradiction edges, which have **no evidence
+  edges**, which rest on a **single citation label** (bookkeeping over
+  active edges, explicitly not truth adjudication). Agents extend it through
+  the same propose→approve gate the exemplar and workspace use. The
+  conversation you had yesterday becomes a structured, provenance-carrying
+  map today.
 
 Three design rules make it trustworthy: **the page computes, the agent judges**
 (no LLM arithmetic — the embedded stats engine is validated against R's
@@ -83,16 +106,19 @@ into the shared page**; **humans own the evidence base**.
 ### How we built it
 
 Vanilla JS, zero dependencies, static hosting only. `document.modelContext`
-registration per the W3C draft (12 tools, JSON-schema'd,
-`additionalProperties:false`, read-only annotations). A from-scratch
+registration per the W3C draft (12 exemplar / 15 workspace / 10 Atlas / 11
+Board tools, JSON-schema'd, `additionalProperties:false`, read-only
+annotations where they apply). A from-scratch
 meta-analysis engine (REML/DerSimonian-Laird random effects, mixed-effects
 meta-regression, subgroup Q-tests, leave-one-out, Egger's test, cumulative MA)
 golden-tested against published metafor output; theme-aware SVG figure
 renderers; claims expressed as a declarative rule AST (no code, no eval —
-auditable and exportable); and four unit/real-browser Playwright suites
-(370+ checks) driving the full tool contract: cross-examination, the human
-approval flow, persistence, and the exported document itself re-tested
-standalone with zero network access.
+auditable and exportable); and six unit/real-browser Playwright suites
+(650+ checks) driving the full tool contract: cross-examination, the human
+approval flow, persistence, the exported document re-tested standalone with
+zero network access, and golden data transcribed from the specs so that even
+a tampered seed fails red. Every build round was adversarially reviewed by a
+second frontier model before merging.
 
 ### Challenges & what we learned
 
@@ -108,8 +134,10 @@ standalone with zero network access.
 
 ### What's next
 
-What ships today is **v0.1**: one genre (the living meta-analysis), hand-built,
-but the smallest *complete* loop — addressable claims, deterministic checks,
+What ships today is **v0.1**: a complete living-meta-analysis loop, plus an
+Evidence Board adaptation of the same provenance, diagnostics, ledger and
+human-approval principles to a second genre (the Atlas is read-only) — still
+the smallest *complete* loop — addressable claims, deterministic checks,
 agent-composed re-analysis, a visible ledger, a human approval gate. Everything
 below is **v0.2: a direction, not shipped software.**
 
@@ -169,61 +197,67 @@ an executable layer for science.
 
 ## 3-minute video script
 
-Target 2:45–2:55. Screen recording of the live site + ChatGPT built-in browser;
-voiceover in English. ⟨Re-time after a dry run.⟩
+Target: **final encoded cut ≤ 2:50** (hard platform limit 3:00). Narration
+below is ≈330 words ≈ 2:22 at 140 wpm, leaving ~28s of real interaction time —
+pre-stage every page in tabs, jump-cut tool latency, and confirm pace with a
+timed dry run before recording. Screen recording of the live site + ChatGPT
+built-in browser; voiceover in English.
 
-**[0:00–0:20] The problem (screen: any PDF paper, then an AI chat citing it)**
-> "When an AI reads a document, it reads the words — and guesses at the numbers.
-> The fastest-growing readership of documents is machines, and almost nobody
-> writes for them. So we did. This is Living Evidence: documents your AI can
-> cross-examine."
+**[0:00–0:18] The problem (screen: any PDF paper, then an AI chat citing it)**
+> "When an AI reads a document, it reads the words — and guesses at the
+> numbers. More and more of a document's readers are machines, and almost
+> nobody writes for them. So we did. This is Living Evidence: documents your
+> AI can cross-examine."
 
-**[0:20–0:45] Meet the exemplar (screen: index.html, scroll slowly)**
-> "This is a real meta-analysis — the Pygmalion effect, nineteen classic
-> experiments on whether teacher expectations raise children's IQ. Every number
-> here is computed in the browser from the study data embedded in the page. The
-> highlighted sentences are claims — each with a deterministic check behind it.
-> And in a WebMCP browser, the machine reader gets twelve typed tools to
-> interrogate all of it."
+**[0:18–0:40] Meet the exemplar (screen: index.html, scroll slowly)**
+> "This is a real meta-analysis of the Pygmalion effect: nineteen experiments
+> on whether teacher expectations raise children's IQ. Every number is
+> computed in-browser from study data embedded in the page. Highlighted
+> sentences are claims with deterministic checks — and a WebMCP browser hands
+> the agent twelve typed tools to interrogate them."
 
-**[0:45–1:15] Cross-examination (screen: ChatGPT built-in browser side-by-side)**
+**[0:40–1:02] Cross-examination (screen: ChatGPT built-in browser side-by-side)**
 > Type: *"Cross-examine this document's claims."*
-> "Watch the page. The agent tests the textbook claim — the one from every
-> psychology course — and it comes back CHALLENGED, right in the prose: pooled
-> across nineteen studies, the effect isn't significant. But the moderator
-> claim comes back SUPPORTED: the effect appears only when teachers had known
-> their pupils for less than a week. The story doesn't collapse — it turns."
+> "The agent tests the textbook claim — CHALLENGED, right in the prose:
+> pooled across nineteen studies, the effect isn't significant. But one claim
+> survives: in these studies the effect shows up only where teachers barely
+> knew their pupils. The story doesn't collapse — it turns."
 
-**[1:15–1:35] The document can lose (screen: c-bias claim)**
+**[1:02–1:20] The document can lose (screen: c-bias claim)**
 > Type: *"How solid is the publication-bias claim?"*
-> "NUANCED — Egger's test p = 0.057. The document's own wording overstates the
-> evidence, and its own check says so. A format for honest documents has to be
-> able to lose an argument about itself."
+> "NUANCED — Egger's test p = 0.057. The document's own wording overstates
+> the evidence, and its own check says so. An honest format has to be able to
+> lose an argument about itself."
 
-**[1:35–2:00] The living part (screen: propose_study → approval card)**
-> Type: *"A new ⟨2026⟩ replication reports d = ⟨…⟩ — add it to the evidence base."*
-> "The agent files the proposal — but nothing changes yet. The page asks ME.
-> One click: nineteen studies become twenty, the forest plot re-renders, and
-> every earlier verdict is marked stale until re-tested. Agents propose.
-> Humans decide. ⟨On-screen label: demo uses a clearly-marked hypothetical
-> replication.⟩"
+**[1:20–1:42] The living part (screen: propose_study → approval card)**
+> Type: *"Propose this synthetic demo record: author 'Demo et al.', year 2026,
+> yi 0.10, vi 0.04, weeks 2, source 'Hypothetical video-demo data note, not a
+> publication', quote 'Synthetic demo: SMD 0.10, variance 0.04, two weeks of
+> prior contact.'"*
+> "The agent files it — nothing changes yet. The page asks ME. One click:
+> nineteen studies become twenty, the forest plot re-renders, every earlier
+> verdict goes stale until re-tested. Agents propose. Humans decide."
 
-**[2:00–2:20] Build your own (screen: workspace.html, empty → populated → export)**
-> "This is the workspace — empty. My agent proposes studies from papers, each
-> with a verbatim quote; I approve every record. One click compiles it all
-> into a single self-contained file — a living document anyone else can
-> cross-examine. Reading, here, compiles into publishing."
+**[1:42–2:00] Build your own (screen: workspace.html, empty → populated → export)**
+> "The workspace starts empty. My agent proposes studies, each with a verbatim
+> quote; I approve every record. One click compiles it into a single
+> self-contained file anyone can cross-examine. Reading compiles into
+> publishing."
 
-**[2:20–2:40] The map (screen: atlas.html — claims light up, then the coverage gap card)**
-> "And it scales into a map. The same literature, indexed live: claims with
-> verdicts, nineteen records, and gaps the page computes itself — this band,
-> eight to sixteen weeks, is empty. An experiment nobody has run, surfaced by
-> the evidence, with its design inputs listed — and no pretend sample size."
+**[2:00–2:18] Board a conversation (screen: board.html — map, then diagnostics panel)**
+> "And it isn't just meta-analysis. This ChatGPT research thread is now a
+> board: hypotheses, claims, twenty-three quoted extracts — all marked
+> unverified — and the questions the conversation left open. One call reports
+> the edge patterns: what's mixed, what's unsupported. Structure, not truth."
 
-**[2:40–2:55] Zoom out (screen: audit ledger, then template.html + SPEC)**
-> "Every question left a trace in an append-only ledger. It's a format — MIT,
-> zero dependencies, static hosting. For an agent, reading is rerunning.
-> This is not a new PDF. It's the first page of an executable layer for
+**[2:18–2:33] The map (screen: atlas.html — the coverage gap lights up)**
+> "The atlas maps the exemplar's records and computes the gap: among these
+> nineteen, weeks eight to sixteen are empty — a coverage lead, not proof.
+> The brief lists the missing design inputs and refuses a fake sample size."
+
+**[2:33–2:47] Zoom out (screen: audit ledger, then SPEC)**
+> "Everything ledgered. MIT, zero dependencies, static hosting. For an agent,
+> reading is rerunning. This is the first page of an executable layer for
 > science."
 
 ---
@@ -236,3 +270,7 @@ voiceover in English. ⟨Re-time after a dry run.⟩
 - [ ] Demo video < 3 min, public YouTube, WITH AUDIO
 - [ ] Re-read official rules on the Devpost page before submitting
       (multiple entries? team bonus? eligibility fields)
+- [ ] Resolve EVERY ⟨…⟩ placeholder (live URL incl. a direct /board.html
+      link, repo URL, replication figures in the video beat) — grep the
+      final text for ⟨ before pasting
+- [ ] Confirm the ENCODED video file is under 3:00 (not just the script)
