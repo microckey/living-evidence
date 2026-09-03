@@ -1,7 +1,7 @@
 # WebMCP Challenge submission draft
 
-Status: technically updated for v0.2 on 2026-09-04. Add the final public video URL
-and re-check the current Devpost rules before submission.
+Status: final technical audit passed on 2026-09-04. Only the Devpost account/team
+state and the final Submit action remain user-visible gates.
 
 ## Project
 
@@ -13,6 +13,7 @@ and re-check the current Devpost rules before submission.
 
 **Public mirror:** <https://microckey.github.io/living-evidence/>
 **Code:** <https://github.com/microckey/living-evidence> (MIT)
+**Video:** <https://youtu.be/fjuumUvfH1E> (2:50, public, with narration)
 
 ## Inspiration
 
@@ -168,11 +169,13 @@ Use this complete synthetic proposal (or pre-stage it):
 
 ## Final checklist
 
-- [ ] Live Sites URL loads and exposes Site tools
-- [ ] GitHub mirror and MIT repository are public
-- [ ] Video is public, has audio, and encoded duration is under 3:00
-- [ ] Devpost description uses “18 experiments / 19 records” and “15 / 18 tools”
-- [ ] No claim of benchmark superiority or cross-corpus generalization
-- [ ] Board described only as an experimental appendix
-- [ ] Re-read current official rules, eligibility and judging criteria
-- [ ] Add final video URL and submit before the displayed deadline
+- [x] Live Sites URL loads; native Chrome WebMCP discovers 15 / 18 / 10 / 11 tools
+- [x] Representative native WebMCP invocation completes on all four public surfaces
+- [x] GitHub mirror and MIT repository are public
+- [x] Video is public, has audio, and encoded duration is 2:50
+- [x] Prepared Devpost description uses “18 experiments / 19 records” and current tool counts
+- [x] No claim of benchmark superiority or cross-corpus generalization
+- [x] Board described only as an experimental appendix
+- [x] Re-read current official rules, eligibility and judging criteria
+- [ ] Confirm teammate invitations, or N/A for a solo submission
+- [ ] Verify the saved Devpost fields and click Submit before the earlier rules deadline

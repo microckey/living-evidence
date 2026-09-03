@@ -17,6 +17,29 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
+## Status (2026-09-04 03:45 JST — final submission audit)
+
+- The public Sites project is active with `public` access. Unauthenticated HTTPS
+  checks returned 200 for `/`, `/workspace`, `/atlas` and `/board`.
+- Native WebMCP is now verified in Google Chrome 152.0.7977.75 with the documented
+  testing feature enabled. Chrome discovered exactly 15 / 18 / 10 / 11 tools on
+  the four public surfaces and completed one representative WebMCP invocation on
+  each. A native `evaluate_claim {claim_id: "c-textbook"}` invocation also
+  completed and rendered `✗ rule failed` into the shared page. This supersedes
+  the earlier note that only the public JavaScript handler surface had been tested;
+  ChatGPT's in-app agent remains untested, but Chrome satisfies the stated either/or
+  submission requirement.
+- The public YouTube upload is playable, not private or unlisted, and its local
+  master is 170.000 seconds with H.264 video and mono AAC narration. The narration
+  and burned captions explain what was built and how WebMCP is used.
+- The unauthenticated GitHub repository is public at the pushed `f5f6ccc` head;
+  GitHub detects the root MIT license and the README explains the WebMCP fit and
+  human/agent collaboration.
+- Remaining user-only gates: confirm any Devpost teammate invitations (or treat as
+  N/A for a solo entry), verify the pasted form fields, and click Submit. The
+  official-rules body still says September 3 at 1:00 pm PDT even though the page
+  header displays a later deadline, so use the earlier time as the hard deadline.
+
 ## Status (2026-09-04 — Evidence Board internationalization)
 
 - The experimental Evidence Board now presents its topic, all node labels and
