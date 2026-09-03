@@ -17,6 +17,29 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
+## Status (2026-09-04 — Evidence Board internationalization)
+
+- The experimental Evidence Board now presents its topic, all node labels and
+  statements, datum values, source names, open questions, test sketch and every
+  edge rationale in English.
+- The 22 Japanese source excerpts remain byte-for-byte original quotations and
+  are displayed beside separate English translations with explicit language
+  metadata. The one evidence row with no source prose uses a machine-readable
+  `not_available` status and missing reason rather than fabricating a citation
+  or presenting the explanation as an original quote.
+- Node proposals, human-review cards, detail panels, persistence, exports and
+  the WebMCP schema preserve `quote_language` and `quote_translation`. Legacy v1
+  saved nodes without those optional fields still restore, and only the exact
+  old default Japanese topic migrates to the new English default.
+- Restored evidence re-derives nested provenance from its validated top-level
+  citation fields to prevent split-brain exports; direct tool calls now enforce
+  the same `quote_origin` enum advertised by the WebMCP schema.
+- Board E2E now pins English-only presentation fields, original-quote integrity,
+  translation display, reload/export persistence, schema exposure and the
+  non-destructive legacy migration.
+- Release gates are green: Board real-browser E2E, the full unit suite, visual
+  snapshot inspection and the Node 24 production build.
+
 ## Status (2026-09-04 02:3x JST — v0.2 PUBLIC)
 
 - Sites v0.2 is deployed at <https://living-evidence.doralemon.chatgpt.site/>
@@ -65,6 +88,10 @@ Say "cross-examine", show ✗ challenged badge on the textbook claim in every de
   `/atlas` and `/board`. This commit is the exact candidate for Sites deployment.
 
 ## Decisions
+
+- 2026-09-04: Internationalization must not overwrite source-language evidence.
+  `quote` is the original verbatim excerpt; `quote_translation` is explicitly
+  presentation text and never a substitute for, or verification of, the source.
 
 - 2026-09-04: A human approval is an acceptance into this device-local evidence
   base, not primary-source or RoB verification. Generic RoB overall/domain logic

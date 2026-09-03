@@ -8,6 +8,16 @@ under the format's rules — propose→approve, quotes required, visible ledger,
 computed (never fabricated) diagnostics. It is DESIGN.md v3 §7's Evidence Map
 (Layer 1), first concrete cut.
 
+> Presentation note (2026-09-04): the shipped Board now presents its topic,
+> labels, statements, values, source names, questions and edge rationales in
+> English for international review. Japanese verbatim excerpts remain unchanged
+> as the authoritative `quote`; each is explicitly tagged `quote_language: 'ja'`
+> and paired with a separate English `quote_translation`. The Japanese text in
+> §6 below is retained as the frozen historical source record, not current UI
+> copy. The one row for which the conversation supplied no quotable prose uses
+> `quote_status: 'not_available'` plus a `quote_missing_reason`; its explanation
+> is not mislabeled as an original quotation.
+
 Honesty rules carried over, non-negotiable:
 - The board has NO statistics engine and issues NO verdicts. A claim's
   `tally_status` (supported / contested / unsupported) is **edge bookkeeping

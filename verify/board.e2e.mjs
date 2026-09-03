@@ -122,10 +122,10 @@ try {
     && proposeNodeSchema.oneOf.every((b) => b.properties && b.properties.type),
     JSON.stringify(proposeNodeSchema));
   const evidenceBranch = proposeNodeSchema.oneOf.find((b) => b.properties.type.const === 'evidence');
-  check('the evidence branch requires value/year/kind/cited_as/quote and accepts optional quote_origin/source_locator',
+  check('the evidence branch requires value/year/kind/cited_as/quote and accepts optional language, translation and locator provenance',
     ['value', 'year', 'kind', 'cited_as', 'quote'].every((f) => evidenceBranch.required.includes(f))
-    && 'quote_origin' in evidenceBranch.properties && 'source_locator' in evidenceBranch.properties
-    && !evidenceBranch.required.includes('quote_origin') && !evidenceBranch.required.includes('source_locator'),
+    && ['quote_language', 'quote_translation', 'quote_origin', 'source_locator'].every((f) => f in evidenceBranch.properties)
+    && ['quote_language', 'quote_translation', 'quote_origin', 'source_locator'].every((f) => !evidenceBranch.required.includes(f)),
     JSON.stringify(evidenceBranch));
   const agentStatus = await page.evaluate(() => window.LivingEvidenceBoard.state.agent);
   check('WebMCP absent in the test browser, handled gracefully', agentStatus.active === false, JSON.stringify(agentStatus));
@@ -142,6 +142,8 @@ try {
     /Human approval means accepted onto this local board/.test(pageFraming)
     && /does not verify the source, quote, edge, or claim/.test(pageFraming),
     pageFraming.slice(0, 1000));
+  check('the default visible Board presentation is English',
+    !/[ぁ-んァ-ヶ一-龯]/.test(pageFraming), pageFraming.match(/[ぁ-んァ-ヶ一-龯].{0,80}/)?.[0] || '');
   const nodeCount = await page.locator('#board-map [data-node]').count();
   check('exactly 40 nodes rendered', nodeCount === 40, String(nodeCount));
   const nodeTypeCounts = await page.evaluate(() => {
@@ -169,9 +171,18 @@ try {
   console.log('\n# 2. seed integrity + tally spot-checks vs an independent recomputation');
   const listedEvidence = await call('list_nodes', { type: 'evidence' });
   check('23 evidence nodes listed', listedEvidence.nodes.length === 23, String(listedEvidence.nodes.length));
-  check('every evidence node carries quote + cited_as + the seed verification label',
-    listedEvidence.nodes.every((n) => typeof n.quote === 'string' && n.quote.length > 0 && typeof n.cited_as === 'string' && n.cited_as.length > 0 && n.verification === SEED_VERIFICATION_LABEL),
-    JSON.stringify(listedEvidence.nodes.find((n) => !n.quote || !n.cited_as || n.verification !== SEED_VERIFICATION_LABEL)));
+  check('every evidence node carries machine-readable quote status + cited_as + the seed verification label',
+    listedEvidence.nodes.every((n) => ['available', 'not_available'].includes(n.quote_status) && typeof n.cited_as === 'string' && n.cited_as.length > 0 && n.verification === SEED_VERIFICATION_LABEL),
+    JSON.stringify(listedEvidence.nodes.find((n) => !['available', 'not_available'].includes(n.quote_status) || !n.cited_as || n.verification !== SEED_VERIFICATION_LABEL)));
+  const japaneseQuoteEvidence = listedEvidence.nodes.filter((n) => n.quote_language === 'ja');
+  check('all 22 Japanese seed quotations carry a separate English translation',
+    japaneseQuoteEvidence.length === 22 && japaneseQuoteEvidence.every((n) => n.quote_status === 'available' && typeof n.quote === 'string' && n.quote.length > 0 && typeof n.quote_translation === 'string' && n.quote_translation.trim().length > 0),
+    JSON.stringify(japaneseQuoteEvidence.filter((n) => !n.quote_translation).map((n) => n.id)));
+  const seedPresentationStrings = SEED.nodes.flatMap((n) => [n.label, n.statement, n.value, n.cited_as, n.test_sketch]).filter(Boolean)
+    .concat(SEED.edges.map((e) => e.rationale).filter(Boolean), SEED.topic);
+  check('all seed presentation fields and edge rationales are English (original quote fields excluded)',
+    seedPresentationStrings.every((s) => !/[ぁ-んァ-ヶ一-龯]/.test(s)),
+    seedPresentationStrings.find((s) => /[ぁ-んァ-ヶ一-龯]/.test(s)) || '');
 
   // [D4] Every remaining supports/contradicts SEED edge (not the live active
   // set, which will pick up e2e's own edgeless-rationale proposals below)
@@ -195,7 +206,7 @@ try {
     JSON.stringify(nodeGap));
   check('claim tallies carry the bookkeeping scope, verbatim', nodeIncome.tally_scope === TALLY_SCOPE, nodeIncome.tally_scope);
   // a claim with zero evidence edges (proposed fresh, no edges yet) must read "none"
-  const freshClaim = await call('propose_node', { type: 'claim', label: 'e2e スポットチェック用の新規クレーム', statement: 'このクレームは意図的にどのエッジも持たない。' });
+  const freshClaim = await call('propose_node', { type: 'claim', label: 'E2E edge-free claim', statement: 'This claim intentionally has no edges.' });
   await page.locator(`#le-pending-node-${freshClaim.node_id} .le-btn-approve`).click();
   await page.waitForTimeout(100);
   const freshDetail = await call('get_node', { node_id: freshClaim.node_id });
@@ -242,21 +253,33 @@ try {
   const eMukyo = await call('get_node', { node_id: 'e-mukyo' });
   check('e-mukyo value carries 26.4 and 7.3', eMukyo.value.includes('26.4') && eMukyo.value.includes('7.3'), eMukyo.value);
   check('e-mukyo year is 2022', eMukyo.year === 2022, String(eMukyo.year));
-  check('e-mukyo cited_as names 就業構造基本調査', eMukyo.cited_as.includes('就業構造基本調査'), eMukyo.cited_as);
+  check('e-mukyo cited_as names the Employment Status Survey', eMukyo.cited_as.includes('Employment Status Survey'), eMukyo.cited_as);
   const eJilpt16 = await call('get_node', { node_id: 'e-jilpt16' });
   check('e-jilpt16 value carries all four quartile figures (24.6/24.2/35.7/31.1)',
     ['24.6', '24.2', '35.7', '31.1'].every((s) => eJilpt16.value.includes(s)), eJilpt16.value);
   const e1995 = await call('get_node', { node_id: 'e-1995' });
   check('e-1995 year is 1995 and value carries 50.4 and 31.1',
     e1995.year === 1995 && e1995.value.includes('50.4') && e1995.value.includes('31.1'), JSON.stringify([e1995.year, e1995.value]));
-  check('e-1995 label reflects it is a conversation-reported figure (D3)', e1995.label === '1995年の専業主婦率（会話記載）', e1995.label);
+  check('e-1995 label reflects it is a conversation-reported figure (D3)', e1995.label === '1995 homemaker share (reported in the conversation)', e1995.label);
   check('e-1995 quote is EXACTLY the new full verbatim sentence (D3)',
     e1995.quote === 'なんと1995年国勢調査でも、有配偶女性の専業主婦率は、東京 50.4% 福井 31.1%でした。', e1995.quote);
+  check('e-1995 identifies the original as Japanese and preserves a separate English translation',
+    e1995.quote_language === 'ja'
+    && e1995.quote_translation === 'Remarkably, even in the 1995 Population Census, the full-time homemaker share among married women was 50.4% in Tokyo and 31.1% in Fukui.',
+    JSON.stringify([e1995.quote_language, e1995.quote_translation]));
   check('e-1995 statement flags the indicator definition and primary table as unconfirmed (D3)',
-    /指標定義と国勢調査の一次表は未確認/.test(e1995.statement), e1995.statement);
+    /indicator definition and primary census table remain unconfirmed/.test(e1995.statement), e1995.statement);
   const eKyuyo = await call('get_node', { node_id: 'e-kyuyo' });
-  check('e-kyuyo quote is EXACTLY the canonical placeholder (not a fabricated citation)',
-    eKyuyo.quote === '（会話中の比較表に数値のみが記載され、引用可能な地の文は与えられていない）', eKyuyo.quote);
+  check('e-kyuyo machine-readably distinguishes a missing quotation from original source prose',
+    eKyuyo.quote_status === 'not_available' && eKyuyo.quote == null && eKyuyo.quote_language == null
+    && eKyuyo.quote_translation == null
+    && eKyuyo.quote_missing_reason === 'The conversation’s comparison table lists only the number and provides no quotable prose.',
+    JSON.stringify(eKyuyo));
+  await call('focus_node', { node_id: 'e-kyuyo' });
+  const kyuyoPanel = (await page.textContent('#board-panel')).replace(/\s+/g, ' ');
+  check('the missing-quotation evidence panel shows status and reason, never an “original quote” label',
+    /quote statusnot available/.test(kyuyoPanel) && /quote missing reasonThe conversation/.test(kyuyoPanel)
+    && !/quote \(original/.test(kyuyoPanel), kyuyoPanel);
 
   const edges2c = await call('get_edges', {});
   const hasEdge = (from, to, type) => edges2c.edges.some((e) => e.from === from && e.to === to && e.type === type);
@@ -326,8 +349,14 @@ try {
 
   // ======================================================================= 4
   console.log('\n# 4. propose_node / propose_edge — validation, approval, matrix enforcement, duplicate rejection');
-  const noQuote = await callErr('propose_node', { type: 'evidence', label: '引用なしテスト', statement: '引用なしで提案されたテスト証拠。', value: 'x', year: 2026, kind: 'survey', cited_as: 'テスト出典' });
+  const noQuote = await callErr('propose_node', { type: 'evidence', label: 'Missing-quote test', statement: 'Test evidence proposed without a quotation.', value: 'x', year: 2026, kind: 'survey', cited_as: 'Test source' });
   check('propose_node evidence without a quote fails, naming the field the schema\'s evidence oneOf branch requires (D7)', /quote/.test(noQuote || ''), noQuote);
+  const badQuoteOrigin = await callErr('propose_node', {
+    type: 'evidence', label: 'Bad quote-origin test', statement: 'Test evidence with invalid provenance.',
+    value: 'x', year: 2026, kind: 'survey', cited_as: 'Test source', quote: 'Test quote.', quote_origin: 'invented',
+  });
+  check('direct invokeTool enforces the same quote_origin enum advertised by the schema',
+    /quote_origin must be one of conversation, primary_source/.test(badQuoteOrigin || ''), badQuoteOrigin);
   const badEdgeShape = await callErr('propose_edge', { from: 'e-mukyo', to: 'e-tfr', type: 'supports' });
   check('evidence -> evidence is rejected by the endpoint/type compatibility matrix, naming it (D5)',
     /not allowed by the endpoint\/type compatibility matrix/.test(badEdgeShape || '') && /evidence→claim/.test(badEdgeShape || ''), badEdgeShape);
@@ -341,9 +370,9 @@ try {
   const versionBefore4 = await boardVersion();
   const rowsBefore4 = await ledgerRows();
   const propNode = await call('propose_node', {
-    type: 'evidence', label: 'e2e追加証拠', statement: 'e2eテストで提案された新規証拠。',
-    value: 'テスト値42%', year: 2026, kind: 'survey', cited_as: 'e2eテスト出典', quote: 'これはe2eテストの引用文である',
-    source_locator: '会話ログの中盤',
+    type: 'evidence', label: 'E2E additional evidence', statement: 'New evidence proposed by the E2E test.',
+    value: 'Test value 42%', year: 2026, kind: 'survey', cited_as: 'E2E test source', quote: 'これはE2Eテストの引用文である。',
+    quote_language: 'ja', quote_translation: 'This is the E2E test quotation.', source_locator: 'Middle of the conversation log',
   });
   check('a valid propose_node returns pending_human_approval', propNode.status === 'pending_human_approval', JSON.stringify(propNode));
   check('the proposal response distinguishes local acceptance from verification',
@@ -358,14 +387,20 @@ try {
   check('quote_origin defaults to "conversation" when omitted, stored on provenance (D7)',
     pendingDetail.provenance?.quote_origin === 'conversation', JSON.stringify(pendingDetail.provenance));
   check('source_locator is stored on provenance when supplied (D7)',
-    pendingDetail.provenance?.source_locator === '会話ログの中盤', JSON.stringify(pendingDetail.provenance));
+    pendingDetail.provenance?.source_locator === 'Middle of the conversation log', JSON.stringify(pendingDetail.provenance));
+  check('the original quote language and English translation are stored on both node and provenance',
+    pendingDetail.quote_status === 'available' && pendingDetail.quote_language === 'ja' && pendingDetail.quote_translation === 'This is the E2E test quotation.'
+    && pendingDetail.provenance?.quote_status === 'available' && pendingDetail.provenance?.quote_language === 'ja' && pendingDetail.provenance?.quote_translation === 'This is the E2E test quotation.',
+    JSON.stringify(pendingDetail));
   check('a still-pending evidence node has no verification label yet (stamped only on approval, D6)',
     pendingDetail.verification == null, JSON.stringify(pendingDetail.verification));
   await call('focus_node', { node_id: propNode.node_id });
   const pendingPanel = (await page.textContent('#board-panel')).replace(/\s+/g, ' ');
   check('the pending detail panel renders quote provenance and says acceptance is not verification',
     /quote_originconversation/.test(pendingPanel)
-    && /source_locator会話ログの中盤/.test(pendingPanel)
+    && /source_locatorMiddle of the conversation log/.test(pendingPanel)
+    && /quote \(original · ja\)/.test(pendingPanel)
+    && /English translationThis is the E2E test quotation/.test(pendingPanel)
     && /acceptance is not verification/.test(pendingPanel),
     pendingPanel);
   // propose_edge from a still-PENDING node must be refused — an edge can only
@@ -384,7 +419,7 @@ try {
     approvedEvidence.verification === '(proposed this session — not independently verified)', approvedEvidence.verification);
 
   const versionBeforeEdge = await boardVersion();
-  const propEdge2 = await call('propose_edge', { from: propNode.node_id, to: 'c-income', type: 'supports', rationale: 'e2eテスト用の根拠。' });
+  const propEdge2 = await call('propose_edge', { from: propNode.node_id, to: 'c-income', type: 'supports', rationale: 'Rationale supplied by the E2E test.' });
   check('propose_edge now succeeds once its "from" node is approved', propEdge2.status === 'pending_human_approval', JSON.stringify(propEdge2));
   check('the edge proposal response also distinguishes acceptance from verification',
     /Human approval adds the edge to this local graph/.test(propEdge2.message)
@@ -424,6 +459,10 @@ try {
     && postReloadAudit.at(-1).summary.includes('restored'),
     postReloadAudit.at(-1)?.summary);
   check('the approved evidence node is still on the map after reload', await page.locator(`[data-node="${propNode.node_id}"]`).count() === 1);
+  const reloadedEvidence = await call('get_node', { node_id: propNode.node_id });
+  check('quote language and English translation survive reload',
+    reloadedEvidence.quote_language === 'ja' && reloadedEvidence.quote_translation === 'This is the E2E test quotation.',
+    JSON.stringify(reloadedEvidence));
 
   await page.evaluate(() => localStorage.setItem('le-board-v1', '{ this is not json'));
   await page.reload({ waitUntil: 'load' });
@@ -431,6 +470,39 @@ try {
   check('a corrupt snapshot boots the clean seed instead of crashing', (await page.locator('#board-map [data-node]').count()) === 40, String(await page.locator('#board-map [data-node]').count()));
   check('board_version resets to 1 after a corrupt-snapshot boot', (await boardVersion()) === 1, String(await boardVersion()));
   check('zero page errors from the corrupt-snapshot recovery', errors.length === 0, errors.join(' | '));
+
+  // A valid pre-translation v1 snapshot has neither quote_language nor
+  // quote_translation. It must remain loadable, while the exact old default
+  // Japanese topic migrates to the new English seed topic.
+  await page.evaluate(() => {
+    const snapshot = {
+      v: 1,
+      topic: '会話で報告された東京の『専業主婦率』は、どの年・母集団・指標定義で他地域より高いのか。差が確認できる場合、経済的選抜・家族構造・時間コストはどこまで説明しうるか（一次資料未照合）',
+      approvedNodes: [{
+        id: 'e-legacy-v1', type: 'evidence', label: 'Legacy v1 evidence',
+        statement: 'A legacy evidence node without translation metadata.', value: '1', year: 2026,
+        kind: 'survey', cited_as: 'Legacy source', quote: 'Legacy verbatim quote.', verification: null,
+        provenance: { origin: 'proposal', quote: 'Conflicting nested quote.', quote_language: 'xx', quote_translation: 'Conflicting translation.', cited_as: 'Conflicting nested source', proposed_at: new Date().toISOString(), approved_at: new Date().toISOString() },
+      }],
+      approvedEdges: [], pendingNodes: [], pendingEdges: [], ledger: [], boardVersion: 2, runCounter: 0,
+    };
+    localStorage.setItem('le-board-v1', JSON.stringify(snapshot));
+  });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.LivingEvidenceBoard && window.LivingEvidenceBoard.tools.length > 0, null, { timeout: 10000 });
+  const restoredLegacy = await call('get_node', { node_id: 'e-legacy-v1' });
+  check('a legacy v1 evidence node without translation metadata is preserved',
+    restoredLegacy.quote === 'Legacy verbatim quote.' && restoredLegacy.quote_status === 'available');
+  check('restore normalizes nested provenance from validated top-level citation fields',
+    restoredLegacy.provenance.quote === restoredLegacy.quote
+    && restoredLegacy.provenance.cited_as === restoredLegacy.cited_as
+    && restoredLegacy.provenance.quote_language === null
+    && restoredLegacy.provenance.quote_translation === null
+    && restoredLegacy.provenance.quote_origin === 'conversation',
+    JSON.stringify(restoredLegacy.provenance));
+  check('the exact old default topic migrates to the new English topic without changing custom topics',
+    await page.evaluate(() => window.LivingEvidenceBoard.state.topic) === SEED.topic,
+    await page.evaluate(() => window.LivingEvidenceBoard.state.topic));
 
   // A structurally-VALID snapshot (parses fine, right shape) can still smuggle
   // a matrix-violating edge into the PENDING list — a tampered snapshot one
@@ -475,6 +547,14 @@ try {
   // block 5's corrupt-snapshot step reset the board to the clean 40-node seed
   // (that reset IS the point of block 5) — export reflects that clean state.
   check('exported node count matches the current (post-reset) 40-node seed', exp2.json.nodes.length === 40, String(exp2.json.nodes.length));
+  const exported1995 = exp2.json.nodes.find((n) => n.id === 'e-1995');
+  check('full export preserves original quote, language and English translation separately',
+    exported1995.quote_language === 'ja' && exported1995.quote_translation === e1995.quote_translation
+    && exported1995.quote === e1995.quote, JSON.stringify(exported1995));
+  const exportedKyuyo = exp2.json.nodes.find((n) => n.id === 'e-kyuyo');
+  check('full export preserves missing-quotation status without manufacturing quote text',
+    exportedKyuyo.quote_status === 'not_available' && exportedKyuyo.quote == null
+    && typeof exportedKyuyo.quote_missing_reason === 'string', JSON.stringify(exportedKyuyo));
 
   // ======================================================================= 7
   console.log('\n# 7. id normalization, focus/Escape/aria, no scroll hijack');
@@ -540,7 +620,7 @@ try {
   // Fresh activity for this block's own attribution check — block 5's
   // corrupt-snapshot recovery deliberately wiped the ledger down to its boot
   // row, so block 4's propose/approve rows no longer exist to inspect.
-  const propose8 = await call('propose_node', { type: 'question', label: 'e2e block8用の質問', statement: 'アクター帰属テスト用の質問。' });
+  const propose8 = await call('propose_node', { type: 'question', label: 'E2E block 8 question', statement: 'A question used to test actor attribution.' });
   await page.locator(`#le-pending-node-${propose8.node_id} .le-btn-approve`).click();
   await page.waitForTimeout(100);
   const log8 = await audit();

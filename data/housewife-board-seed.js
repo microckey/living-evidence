@@ -1,25 +1,26 @@
 // housewife-board-seed.js — seed data for the Evidence Board (board.html + lib/board.js).
 //
-// Transcribed EXACTLY from docs/BOARD-SPEC.md §6 (frozen 2026-08-31): 40 nodes
+// Semantic English presentation of docs/BOARD-SPEC.md §6 (frozen 2026-08-31): 40 nodes
 // (2 hypotheses, 4 mechanisms, 8 claims, 23 evidence, 3 questions) and, as of
 // the Codex-review fix round (D4), 41 edges (incl. FOUR evidence→hypothesis
 // edges — e-kaiki, e-mikonritsu and e-kyuyo supporting h-selection, e-ishiki
 // supporting h-model — per the v1 matrix ruling in docs/BOARD-SPEC.md §1).
-// Every evidence node carries the seed verification label and `cited_as` the
-// spec requires — this is agent-extracted material from a ChatGPT research
-// conversation, not independently checked, and every surface that shows it
-// must say so (see BOARD-SPEC.md §0). `kind` is likewise only ever "source
-// kind as reported in the conversation (unverified)" — not an independently
+// Every evidence node carries the seed verification label and an English
+// `cited_as`. Japanese verbatim excerpts remain in `quote`, with an explicit
+// English `quote_translation` beside them — this is agent-extracted material
+// from a ChatGPT research conversation, not independently checked, and every
+// surface that shows it must say so (see BOARD-SPEC.md §0). `kind` is likewise
+// only ever "source kind as reported in the conversation (unverified)" — not
+// an independently
 // checked classification.
 //
 // Seed-data facts the spec's own prose could not honestly resolve,
 // documented once here rather than silently patched over:
 //
 //  - e-kyuyo is the one evidence row §6 never gives a quotable fragment for
-//    ("the conversation table lists it without a clear source line"). quote
-//    is a required field and the honesty rule forbids inventing one, so its
-//    quote states plainly that no verbatim fragment was given, rather than
-//    fabricating a citation sentence that was never in the conversation.
+//    ("the conversation table lists it without a clear source line"). It uses
+//    quote_status:not_available plus quote_missing_reason rather than
+//    fabricating source prose or storing an explanatory note as a quotation.
 //
 //  - [Codex-review fix D4, applied here]: two contradicts edges into
 //    h-selection — ed35 (c-notonly → h-selection) and ed43 (e-1995 →
@@ -39,6 +40,11 @@ function seedProvenance(extra = {}) {
     origin: 'seed',
     source: null,
     quote: null,
+    quote_status: null,
+    quote_missing_reason: null,
+    quote_language: null,
+    quote_translation: null,
+    quote_origin: null,
     cited_as: null,
     verification: null,
     proposed_at: null,
@@ -59,12 +65,22 @@ function claim(id, label, statement) {
   return { id, type: 'claim', label, statement, provenance: seedProvenance() };
 }
 
-function evidence(id, label, statement, { value, year, kind, cited_as, quote }) {
+function evidence(id, label, statement, {
+  value, year, kind, cited_as, quote = null,
+  quote_status = quote ? 'available' : 'not_available',
+  quote_missing_reason = null,
+  quote_language = quote ? 'ja' : null,
+  quote_translation = null,
+}) {
   return {
     id, type: 'evidence', label, statement,
-    value, year, kind, cited_as, quote,
+    value, year, kind, cited_as, quote, quote_status, quote_missing_reason,
+    quote_language, quote_translation,
     verification: SEED_VERIFICATION,
-    provenance: seedProvenance({ cited_as, quote, verification: SEED_VERIFICATION }),
+    provenance: seedProvenance({
+      cited_as, quote, quote_status, quote_missing_reason, quote_language,
+      quote_translation, quote_origin: 'conversation', verification: SEED_VERIFICATION,
+    }),
   };
 }
 
@@ -81,117 +97,118 @@ function edge(id, from, to, type, rationale = null) {
 const HYPOTHESES = [
   hypothesis(
     'h-selection',
-    '経済的選抜仮説',
-    '東京では結婚・出産の経済的ハードルが高く、子どもを持てた世帯が高所得側に選抜され、それが子育て家庭の専業主婦率を押し上げている。',
+    'Economic selection hypothesis',
+    'Because Tokyo’s economic barriers to marriage and childbearing are high, families who go on to have children may be disproportionately higher-income, raising the share of non-employed wives among families with children.',
   ),
   hypothesis(
     'h-model',
-    '4要因モデル',
-    '東京の専業主婦率の高さは、経済的選抜 × 祖父母支援の欠如 × 通勤・時間コスト × 高所得世帯における片働きの経済合理性の重なりで説明され、「都会は専業主婦志向」という価値観説はデータと整合しない。',
+    'Four-factor model',
+    'Tokyo’s higher share of non-employed wives is explained by overlapping economic selection, limited grandparent support, commuting and time costs, and the economic rationality of a single-earner arrangement in high-income households. The alternative “urban homemaker preference” explanation is not consistent with the reported data.',
   ),
 ];
 
 const MECHANISMS = [
-  mechanism('m-selection', '高コスト→結婚・出産ハードル→高所得世帯の選抜', '高コスト→結婚・出産ハードル→高所得世帯の選抜'),
-  mechanism('m-grandparent', '三世代同居・近居→祖父母の育児支援→共働き成立', '三世代同居・近居→祖父母の育児支援→共働き成立'),
-  mechanism('m-time', '長時間通勤＋学童制約→共働きの時間コスト増', '長時間通勤＋学童制約→共働きの時間コスト増'),
-  mechanism('m-oneincome', '夫高所得×激務→片働きが世帯として経済合理的になる', '夫高所得×激務→片働きが世帯として経済合理的になる'),
+  mechanism('m-selection', 'High costs → marriage/childbearing barriers → income selection', 'High costs raise barriers to marriage and childbearing, selecting families with children toward higher household incomes.'),
+  mechanism('m-grandparent', 'Three-generation proximity → grandparent care → dual earners', 'Living with or near grandparents enables childcare support and makes dual-earner arrangements more feasible.'),
+  mechanism('m-time', 'Long commutes + care constraints → higher dual-earner time costs', 'Long commutes and after-school-care constraints increase the time costs of sustaining two careers.'),
+  mechanism('m-oneincome', 'High income × overwork → single earner becomes rational', 'When a high-earning husband also works very long hours, a single-earner arrangement can become economically rational for the household.'),
 ];
 
 const CLAIMS = [
-  claim('c-gap', '東京の学齢期児童家庭の妻無業率は福井の約3.6倍である', '東京の学齢期児童家庭の妻無業率は福井の約3.6倍である'),
-  claim('c-marriage', '東京の低出生率は主に有配偶率の低さ（結婚まで到達する人の少なさ）による', '東京の低出生率は主に有配偶率の低さ（結婚まで到達する人の少なさ）による'),
-  claim('c-income', '夫の所得が高いほど妻が非就業・扶養内になりやすい', '夫の所得が高いほど妻が非就業・扶養内になりやすい'),
-  claim('c-grandparent', '祖父母の育児支援インフラの差が地方の共働きを支えている', '祖父母の育児支援インフラの差が地方の共働きを支えている'),
-  claim('c-commute', '通勤時間の差が首都圏の共働きコストを押し上げている', '通勤時間の差が首都圏の共働きコストを押し上げている'),
-  claim('c-values', '「地方は保守的で東京は平等志向」という価値観説は地域差を説明しない（むしろ逆）', '「地方は保守的で東京は平等志向」という価値観説は地域差を説明しない（むしろ逆）'),
-  claim('c-notonly', '地域差は経済的選抜だけでは説明できない（選抜が強まる前から差が存在した）', '地域差は経済的選抜だけでは説明できない（選抜が強まる前から差が存在した）'),
-  claim('c-industry', '地方には女性が正社員として継続就業しやすい産業構造がある', '地方には女性が正社員として継続就業しやすい産業構造がある'),
+  claim('c-gap', 'Tokyo’s wife non-employment rate is about 3.6× Fukui’s', 'Among families whose youngest child is age 6–14, Tokyo’s wife non-employment rate is about 3.6 times Fukui’s.'),
+  claim('c-marriage', 'Tokyo’s low fertility mainly reflects a low married share', 'Tokyo’s low fertility mainly reflects its low married share: fewer people reach marriage.'),
+  claim('c-income', 'Higher husbands’ income is associated with wives’ non-employment', 'Higher husbands’ income is associated with wives being non-employed or limiting earnings to remain dependents.'),
+  claim('c-grandparent', 'Grandparent-care infrastructure supports regional dual earners', 'Regional differences in grandparent childcare support help sustain dual-earner families outside Tokyo.'),
+  claim('c-commute', 'Commute differences raise dual-earner costs around Tokyo', 'Longer commutes raise the cost of maintaining two careers in the Tokyo metropolitan area.'),
+  claim('c-values', 'A simple “rural conservative, Tokyo egalitarian” story does not fit', 'The reported regional differences are not explained by a simple “rural areas are conservative and Tokyo is egalitarian” values story; some measures point in the opposite direction.'),
+  claim('c-notonly', 'Economic selection alone cannot explain the regional gap', 'Economic selection alone cannot explain the regional gap because the reported difference predates its recent intensification.'),
+  claim('c-industry', 'Regional industry structures may support women’s career continuity', 'Industry structures outside Tokyo may make it easier for women to remain in regular full-time employment.'),
 ];
 
 const EVIDENCE = [
-  evidence('e-mukyo', '末子6〜14歳家庭の妻無業率',
-    '末子6〜14歳家庭の妻無業率は東京26.4%・福井7.3%（東京全国最高・福井最低）。',
-    { value: '東京26.4% vs 福井7.3%（東京全国最高・福井最低）', year: 2022, kind: 'official-stat', cited_as: '就業構造基本調査(第158表)', quote: '末子6〜14歳家庭の妻無業率 26.4%(東京) 7.3%(福井)' }),
-  evidence('e-tfr', '合計特殊出生率',
-    '合計特殊出生率は東京0.96（全国最低）・福井1.45（全国3位）。',
-    { value: '東京0.96(全国最低) vs 福井1.45(全国3位)', year: 2025, kind: 'official-stat', cited_as: '厚生労働省', quote: '2025年は東京0.96で全国最低、福井1.45で全国3位' }),
-  evidence('e-yuhaigu', '有配偶率(2020国勢調査)',
-    '有配偶率（2020国勢調査）は男性で東京51.3%（全国最低）・福井61.6%、女性で東京49.4%・福井57.4%。',
-    { value: '男性: 東京51.3%(最低) vs 福井61.6% / 女性: 東京49.4% vs 57.4%', year: 2020, kind: 'official-stat', cited_as: '総務省統計局', quote: '男性：東京51.3%（全国最低）' }),
-  evidence('e-mikon', '未婚割合',
-    '未婚割合は男性東京42.1%・女性33.5%で、いずれも全国最高。',
-    { value: '男性 東京42.1%・女性33.5%(いずれも全国最高)', year: 2020, kind: 'official-stat', cited_as: '総務省統計局', quote: '未婚割合は…東京42.1%（全国最高）' }),
-  evidence('e-konin', '婚姻率(人口千人当たり)',
-    '人口千人当たり婚姻率は東京5.9で全国4.1より高く、婚姻件数自体は少なくない。',
-    { value: '東京5.9 > 全国4.1 — 婚姻件数自体は少なくない', year: 2025, kind: 'official-stat', cited_as: '厚生労働省', quote: '単純な人口千人当たり婚姻率は、むしろ東京が5.9で全国4.1より高い' }),
-  evidence('e-shokon', '平均初婚年齢',
-    '平均初婚年齢は東京都が夫32.2歳・妻30.7歳で男女とも全国最高。',
-    { value: '東京 夫32.2歳・妻30.7歳(全国最高)', year: 2024, kind: 'official-stat', cited_as: '厚生労働省', quote: '平均初婚年齢は東京都が男女とも全国最高' }),
-  evidence('e-sansedai', '三世代世帯率',
-    '三世代世帯率は東京1.3%（全国最低）・福井11.5%（全国2位）で約8.8倍の差。',
-    { value: '東京1.3%(全国最低) vs 福井11.5%(全国2位) — 約8.8倍', year: 2020, kind: 'official-stat', cited_as: '総務省統計局', quote: '東京 1.3% ― 全国最低 福井 11.5% ― 全国2位' }),
-  evidence('e-fukui-doukyo', '共働き家庭のうち夫婦+子+親世帯',
-    '共働き家庭のうち夫婦＋子＋親世帯の割合は福井17.8%・全国6.4%。',
-    { value: '福井17.8% vs 全国6.4%', year: 'n/a', kind: 'survey', cited_as: '福井県', quote: '福井では、共働き家庭のうち夫婦＋子＋親世帯が17.8%' }),
-  evidence('e-doukyo-shugyo', '親との同居と妻の就業',
-    '親との同居は妻の就業を促進する方向に働く。',
-    { value: '同居は妻の就業を促進する方向', year: 'n/a', kind: 'regression', cited_as: 'RIETI', quote: '親との同居は妻の就業を促進する方向に働いています' }),
-  evidence('e-tsukin', '通勤・通学時間(1日平均)',
-    '通勤・通学時間（1日平均）は神奈川100分・千葉95分・東京95分・全国79分・福井62分。',
-    { value: '神奈川100/千葉95/東京95/全国79/福井62分', year: 2021, kind: 'official-stat', cited_as: '総務省統計局', quote: '神奈川 100分 千葉 95分 東京 95分 全国 79分 福井 62分' }),
-  evidence('e-kaji', '夫の家事育児時間と妻の就業',
-    '夫の家事・育児時間が多いほど妻が就業しやすく、夫の高所得は夫の家事参加の減少と関連する。',
-    { value: '夫の家事・育児時間が多いほど妻が就業しやすい／夫の高所得は夫の家事参加減と関連', year: 'n/a', kind: 'regression', cited_as: 'RIETI', quote: '夫の家事・育児時間が多いほど妻が就業しやすく' }),
-  evidence('e-60h', '夫の労働時間と妻のフルタイム就業',
-    '夫が週60時間超労働の場合、妻のフルタイム就業率が大きく低下する。',
-    { value: '夫が週60時間超労働で妻フルタイム就業率が大きく低下', year: 'n/a', kind: 'survey', cited_as: 'JILPT', quote: '夫の労働時間が週60時間を超えると妻のフルタイム就業率が大きく低下' }),
-  evidence('e-zeimu', '夫所得と妻の就労調整(税務データ追跡)',
-    '妻の出産前所得を揃えても、夫所得が高いほど出産後に妻が扶養内・無収入になりやすい（税務データ追跡）。',
-    { value: '妻の出産前所得を揃えても、夫所得が高いほど出産後に扶養内・無収入へ', year: 'n/a', kind: 'regression', cited_as: 'RIETI', quote: '夫の収入が高いほど、出産後に妻が扶養内または無収入になる割合が高くなる' }),
-  evidence('e-jilpt16', '夫所得四分位別の妻無業率',
-    '夫所得四分位別の妻無業率は24.6% / 24.2% / 35.7% / 31.1%で、単調な増加ではない。',
-    { value: '24.6% / 24.2% / 35.7% / 31.1% — 単調でない', year: 2016, kind: 'survey', cited_as: 'JILPT', quote: '24.6%、24.2%、35.7%、31.1%' }),
-  evidence('e-teishotoku', '夫低所得と妻就業',
-    '夫が低所得の家庭ほど妻の就業率が高い傾向が、弱まりつつも残存している。',
-    { value: '夫が低所得の家庭ほど妻の就業率が高い(弱まりつつ残存)', year: 2025, kind: 'study', cited_as: 'JILPT', quote: '夫が低所得の家庭ほど妻の就業率が高い傾向' }),
-  evidence('e-kaiki', '有配偶率の都道府県回帰',
-    '都道府県回帰では非正規雇用率・教育費・家賃の高さが有配偶率を有意に押し下げる。',
-    { value: '非正規雇用率・教育費・家賃の高さが有配偶率を有意に押し下げ', year: 'n/a', kind: 'regression', cited_as: '内閣府', quote: '非正規雇用率が高い → 有配偶率↓' }),
-  evidence('e-mikonritsu', '男性所得と未婚率',
-    '男性では所得が高くなるほど未婚率が低下する関係がある。',
-    { value: '所得が高いほど未婚率が低い', year: 'n/a', kind: 'regression', cited_as: '内閣府', quote: '男性では所得が高くなるほど未婚率が低下する関係' }),
-  evidence('e-1995', '1995年の専業主婦率（会話記載）',
-    '会話は、1995年の「有配偶女性の専業主婦率」を東京50.4%、福井31.1%と記載している。指標定義と国勢調査の一次表は未確認。',
-    { value: '有配偶女性の専業主婦率 東京50.4% vs 福井31.1% — 当時から大差', year: 1995, kind: 'official-stat', cited_as: '総務省統計局(国勢調査)', quote: 'なんと1995年国勢調査でも、有配偶女性の専業主婦率は、東京 50.4% 福井 31.1%でした。' }),
-  evidence('e-ishiki', '固定的性別役割意識',
-    '固定的性別役割意識は、女性については南関東がほとんどの項目で全国最低。',
-    { value: '女性は南関東がほとんどの項目で全国最低', year: 2025, kind: 'official-stat', cited_as: '男女共同参画白書', quote: '南関東＝東京圏がほとんどの項目で全国で最も低い' }),
-  evidence('e-ushinai', '有業率低下(25-29→35-39歳)',
-    '25-29歳から35-39歳にかけての有業率低下は北陸1.7ポイントに対し南関東9.8ポイント（全国最大）。',
-    { value: '北陸1.7pt vs 南関東9.8pt(全国最大)', year: 'n/a', kind: 'official-stat', cited_as: '男女共同参画白書', quote: '北陸：わずか1.7ポイント 南関東：9.8ポイント' }),
-  evidence('e-sangyo', '女性正規職員の産業構成',
-    '女性正規職員の産業構成は製造業で北陸19.2%・南関東10.3%、医療福祉で南関東23.0%・地方30〜37%。',
-    { value: '製造業: 北陸19.2% vs 南関東10.3% / 医療福祉: 南関東23.0% vs 地方30〜37%', year: 2022, kind: 'official-stat', cited_as: '内閣府', quote: '北陸19.2%に対し南関東10.3%' }),
-  evidence('e-hoiku', '保育所定員と女性労働参加',
-    '25〜49歳女性あたり保育所定員が多い都道府県ほど女性の労働参加率が高い傾向がある。',
-    { value: '25〜49歳女性あたり保育所定員が多い県ほど労働参加率が高い', year: 'n/a', kind: 'regression', cited_as: '内閣府', quote: '保育所定員が多い都道府県ほど女性の労働参加率が高い傾向' }),
+  evidence('e-mukyo', 'Wife non-employment, youngest child age 6–14',
+    'Among families whose youngest child is age 6–14, the reported wife non-employment rate is 26.4% in Tokyo and 7.3% in Fukui (highest and lowest nationally).',
+    { value: 'Tokyo 26.4% vs Fukui 7.3% (highest vs lowest nationally)', year: 2022, kind: 'official-stat', cited_as: 'Employment Status Survey, Table 158 (Statistics Bureau of Japan)', quote: '末子6〜14歳家庭の妻無業率 26.4%(東京) 7.3%(福井)', quote_translation: 'Wife non-employment rate in families whose youngest child is age 6–14: 26.4% (Tokyo), 7.3% (Fukui).' }),
+  evidence('e-tfr', 'Total fertility rate',
+    'The conversation reports a total fertility rate of 0.96 in Tokyo (lowest nationally) and 1.45 in Fukui (third highest).',
+    { value: 'Tokyo 0.96 (lowest nationally) vs Fukui 1.45 (third highest)', year: 2025, kind: 'official-stat', cited_as: 'Ministry of Health, Labour and Welfare', quote: '2025年は東京0.96で全国最低、福井1.45で全国3位', quote_translation: 'In 2025, Tokyo was lowest nationally at 0.96, while Fukui ranked third at 1.45.' }),
+  evidence('e-yuhaigu', 'Married share (2020 Population Census)',
+    'For men, the reported married share is 51.3% in Tokyo (lowest nationally) and 61.6% in Fukui; for women, it is 49.4% and 57.4%.',
+    { value: 'Men: Tokyo 51.3% vs Fukui 61.6% / Women: Tokyo 49.4% vs Fukui 57.4%', year: 2020, kind: 'official-stat', cited_as: 'Statistics Bureau of Japan', quote: '男性：東京51.3%（全国最低）', quote_translation: 'Men: Tokyo 51.3% (lowest nationally).' }),
+  evidence('e-mikon', 'Never-married share',
+    'The conversation reports never-married shares of 42.1% for men and 33.5% for women in Tokyo, both the highest nationally.',
+    { value: 'Tokyo: men 42.1%, women 33.5% (both highest nationally)', year: 2020, kind: 'official-stat', cited_as: 'Statistics Bureau of Japan', quote: '未婚割合は…東京42.1%（全国最高）', quote_translation: 'The never-married share … Tokyo 42.1% (highest nationally).' }),
+  evidence('e-konin', 'Marriages per 1,000 population',
+    'The reported crude marriage rate is 5.9 per 1,000 in Tokyo versus 4.1 nationally, so the annual flow of marriages is not unusually small.',
+    { value: 'Tokyo 5.9 > national 4.1 per 1,000', year: 2025, kind: 'official-stat', cited_as: 'Ministry of Health, Labour and Welfare', quote: '単純な人口千人当たり婚姻率は、むしろ東京が5.9で全国4.1より高い', quote_translation: 'The crude marriage rate per 1,000 is actually higher in Tokyo at 5.9 than the national figure of 4.1.' }),
+  evidence('e-shokon', 'Mean age at first marriage',
+    'The conversation reports Tokyo’s mean age at first marriage as 32.2 for husbands and 30.7 for wives, the highest nationally for both.',
+    { value: 'Tokyo: husbands 32.2, wives 30.7 (highest nationally)', year: 2024, kind: 'official-stat', cited_as: 'Ministry of Health, Labour and Welfare', quote: '平均初婚年齢は東京都が男女とも全国最高', quote_translation: 'Tokyo has the highest mean age at first marriage nationally for both men and women.' }),
+  evidence('e-sansedai', 'Three-generation household share',
+    'The reported three-generation household share is 1.3% in Tokyo (lowest nationally) and 11.5% in Fukui (second highest), an approximately 8.8-fold difference.',
+    { value: 'Tokyo 1.3% (lowest) vs Fukui 11.5% (second highest) — about 8.8×', year: 2020, kind: 'official-stat', cited_as: 'Statistics Bureau of Japan', quote: '東京 1.3% ― 全国最低 福井 11.5% ― 全国2位', quote_translation: 'Tokyo 1.3% — lowest nationally; Fukui 11.5% — second highest.' }),
+  evidence('e-fukui-doukyo', 'Couple + children + parent among dual-earner families',
+    'The reported share of dual-earner families consisting of a couple, children, and a parent is 17.8% in Fukui versus 6.4% nationally.',
+    { value: 'Fukui 17.8% vs national 6.4%', year: 'n/a', kind: 'survey', cited_as: 'Fukui Prefecture', quote: '福井では、共働き家庭のうち夫婦＋子＋親世帯が17.8%', quote_translation: 'In Fukui, 17.8% of dual-earner families consist of a couple, children, and a parent.' }),
+  evidence('e-doukyo-shugyo', 'Living with parents and wives’ employment',
+    'The cited regression is reported as associating co-residence with parents with greater employment among wives.',
+    { value: 'Co-residence with parents is associated with greater employment among wives', year: 'n/a', kind: 'regression', cited_as: 'Research Institute of Economy, Trade and Industry (RIETI)', quote: '親との同居は妻の就業を促進する方向に働いています', quote_translation: 'Living with parents works in the direction of promoting wives’ employment.' }),
+  evidence('e-tsukin', 'Average daily commuting and school-travel time',
+    'Reported daily commuting and school-travel times are 100 minutes in Kanagawa, 95 in Chiba, 95 in Tokyo, 79 nationally, and 62 in Fukui.',
+    { value: 'Kanagawa 100 / Chiba 95 / Tokyo 95 / national 79 / Fukui 62 minutes', year: 2021, kind: 'official-stat', cited_as: 'Statistics Bureau of Japan', quote: '神奈川 100分 千葉 95分 東京 95分 全国 79分 福井 62分', quote_translation: 'Kanagawa 100 min; Chiba 95; Tokyo 95; national 79; Fukui 62.' }),
+  evidence('e-kaji', 'Husbands’ housework/childcare time and wives’ employment',
+    'More time spent by husbands on housework and childcare is reported as associated with greater employment among wives, while higher husband income is associated with less participation at home.',
+    { value: 'More husband housework/childcare ↔ greater wife employment; higher husband income ↔ less participation', year: 'n/a', kind: 'regression', cited_as: 'Research Institute of Economy, Trade and Industry (RIETI)', quote: '夫の家事・育児時間が多いほど妻が就業しやすく', quote_translation: 'The more time a husband spends on housework and childcare, the more likely his wife is to work.' }),
+  evidence('e-60h', 'Husbands’ work hours and wives’ full-time employment',
+    'When husbands work more than 60 hours per week, wives’ full-time employment rate is reported to fall substantially.',
+    { value: 'Husband works >60 hours/week → substantially lower wife full-time employment', year: 'n/a', kind: 'survey', cited_as: 'Japan Institute for Labour Policy and Training (JILPT)', quote: '夫の労働時間が週60時間を超えると妻のフルタイム就業率が大きく低下', quote_translation: 'When a husband works more than 60 hours per week, his wife’s full-time employment rate falls substantially.' }),
+  evidence('e-zeimu', 'Husband income and wife employment adjustment (tax records)',
+    'After matching wives’ pre-birth income, higher husband income is reported as associated with wives becoming dependents or having no income after childbirth.',
+    { value: 'After matching pre-birth income, higher husband income → wife more often dependent or without income', year: 'n/a', kind: 'regression', cited_as: 'Research Institute of Economy, Trade and Industry (RIETI)', quote: '夫の収入が高いほど、出産後に妻が扶養内または無収入になる割合が高くなる', quote_translation: 'The higher the husband’s income, the larger the share of wives who become dependents or have no income after childbirth.' }),
+  evidence('e-jilpt16', 'Wife non-employment by husband-income quartile',
+    'Reported wife non-employment rates across husband-income quartiles are 24.6%, 24.2%, 35.7%, and 31.1%, which is not monotonic.',
+    { value: '24.6% / 24.2% / 35.7% / 31.1% — not monotonic', year: 2016, kind: 'survey', cited_as: 'Japan Institute for Labour Policy and Training (JILPT)', quote: '24.6%、24.2%、35.7%、31.1%', quote_translation: '24.6%, 24.2%, 35.7%, 31.1%.' }),
+  evidence('e-teishotoku', 'Low husband income and wife employment',
+    'The tendency for wives to work more often when husbands have lower incomes is reported as weakening but still present.',
+    { value: 'Lower husband income → higher wife employment (weaker but still present)', year: 2025, kind: 'study', cited_as: 'Japan Institute for Labour Policy and Training (JILPT)', quote: '夫が低所得の家庭ほど妻の就業率が高い傾向', quote_translation: 'Wives tend to have higher employment rates in families where husbands have lower incomes.' }),
+  evidence('e-kaiki', 'Prefectural regression of married share',
+    'A prefectural regression is reported as finding that non-regular employment, education costs, and high rents significantly reduce the married share.',
+    { value: 'Non-regular employment, education costs, and rents significantly reduce the married share', year: 'n/a', kind: 'regression', cited_as: 'Cabinet Office, Government of Japan', quote: '非正規雇用率が高い → 有配偶率↓', quote_translation: 'Higher non-regular employment → lower married share.' }),
+  evidence('e-mikonritsu', 'Men’s income and never-married share',
+    'Among men, higher income is reported as associated with a lower never-married share.',
+    { value: 'Higher men’s income → lower never-married share', year: 'n/a', kind: 'regression', cited_as: 'Cabinet Office, Government of Japan', quote: '男性では所得が高くなるほど未婚率が低下する関係', quote_translation: 'Among men, the never-married share decreases as income rises.' }),
+  evidence('e-1995', '1995 homemaker share (reported in the conversation)',
+    'The conversation reports a 1995 “full-time homemaker share among married women” of 50.4% in Tokyo and 31.1% in Fukui. The indicator definition and primary census table remain unconfirmed.',
+    { value: 'Married-women homemaker share: Tokyo 50.4% vs Fukui 31.1% — already a large gap in 1995', year: 1995, kind: 'official-stat', cited_as: '1995 Population Census (Statistics Bureau of Japan), as cited in the conversation', quote: 'なんと1995年国勢調査でも、有配偶女性の専業主婦率は、東京 50.4% 福井 31.1%でした。', quote_translation: 'Remarkably, even in the 1995 Population Census, the full-time homemaker share among married women was 50.4% in Tokyo and 31.1% in Fukui.' }),
+  evidence('e-ishiki', 'Traditional gender-role attitudes',
+    'For women, Southern Kanto is reported as having the lowest traditional gender-role attitudes nationally on almost every item.',
+    { value: 'Women in Southern Kanto rank lowest nationally on almost every item', year: 2025, kind: 'official-stat', cited_as: 'White Paper on Gender Equality (Cabinet Office, Government of Japan)', quote: '南関東＝東京圏がほとんどの項目で全国で最も低い', quote_translation: 'Southern Kanto—the Tokyo region—is the lowest nationally on almost every item.' }),
+  evidence('e-ushinai', 'Employment-rate decline from ages 25–29 to 35–39',
+    'The reported employment-rate decline from ages 25–29 to 35–39 is 1.7 percentage points in Hokuriku versus 9.8 in Southern Kanto, the largest nationally.',
+    { value: 'Hokuriku 1.7 points vs Southern Kanto 9.8 points (largest nationally)', year: 'n/a', kind: 'official-stat', cited_as: 'White Paper on Gender Equality (Cabinet Office, Government of Japan)', quote: '北陸：わずか1.7ポイント 南関東：9.8ポイント', quote_translation: 'Hokuriku: only 1.7 percentage points; Southern Kanto: 9.8 percentage points.' }),
+  evidence('e-sangyo', 'Industry composition of women in regular employment',
+    'Among women in regular employment, manufacturing accounts for 19.2% in Hokuriku versus 10.3% in Southern Kanto; health and welfare accounts for 23.0% in Southern Kanto versus 30–37% in other regions.',
+    { value: 'Manufacturing: Hokuriku 19.2% vs Southern Kanto 10.3% / Health & welfare: 23.0% vs 30–37%', year: 2022, kind: 'official-stat', cited_as: 'Cabinet Office, Government of Japan', quote: '北陸19.2%に対し南関東10.3%', quote_translation: '19.2% in Hokuriku compared with 10.3% in Southern Kanto.' }),
+  evidence('e-hoiku', 'Childcare capacity and women’s labor-force participation',
+    'Prefectures with more childcare places per woman age 25–49 are reported as tending to have higher women’s labor-force participation.',
+    { value: 'More childcare places per woman age 25–49 → higher labor-force participation', year: 'n/a', kind: 'regression', cited_as: 'Cabinet Office, Government of Japan', quote: '保育所定員が多い都道府県ほど女性の労働参加率が高い傾向', quote_translation: 'Prefectures with more childcare places tend to have higher women’s labor-force participation.' }),
   // No verbatim fragment was given for this row in the source conversation (see
   // the file header) — cited_as is the spec's own honest label for it, and the
-  // quote says plainly that no quotable text exists rather than inventing one.
-  evidence('e-kyuyo', '男性一般労働者給与',
-    '男性一般労働者給与は東京44.1万円/月で全国最高。',
-    { value: '東京44.1万円/月(全国最高)', year: 2024, kind: 'official-stat', cited_as: '(会話中の比較表)', quote: '（会話中の比較表に数値のみが記載され、引用可能な地の文は与えられていない）' }),
+  // machine-readable missing-quote fields say plainly that no quotable text
+  // exists rather than presenting an explanatory note as an original quote.
+  evidence('e-kyuyo', 'Monthly pay for male general (non-part-time) workers',
+    'The conversation table reports monthly pay of ¥441,000 for male general (non-part-time) workers in Tokyo, the highest nationally.',
+    { value: 'Male general workers: Tokyo ¥441,000/month (highest nationally)', year: 2024, kind: 'official-stat', cited_as: 'Comparison table in the source conversation', quote_status: 'not_available', quote_missing_reason: 'The conversation’s comparison table lists only the number and provides no quotable prose.' }),
 ];
 
 const QUESTIONS = [
-  question('q-decompose', '夫所得を揃えたら東京-福井差は何pt縮むか',
-    '夫所得を揃えたら、東京・福井間の専業主婦率の差は何ポイント縮むかを問う。',
-    '就業構造基本調査の個票/詳細クロスで 妻非就業 ~ 夫所得 + 妻潜在賃金 + 末子年齢 + 親同居 + 通勤 + 地域 を推定し、所得を揃えた地域差を見る'),
-  question('q-causal', '東京の子育て世帯の所得選抜度を直接測った因果研究は存在するか',
-    '東京の子育て世帯における所得選抜の強さを直接測定した因果研究が存在するかを問う（会話中では未発見）。'),
-  question('q-share', '19.1ptの差に対する要因別寄与(選抜/祖父母/通勤/産業)の分解',
-    '東京・福井間の19.1ポイント差に対する要因別寄与（経済的選抜／祖父母支援／通勤／産業構造）の分解を問う。'),
+  question('q-decompose', 'How much would income adjustment shrink the Tokyo–Fukui gap?',
+    'How many percentage points would the reported Tokyo–Fukui wife non-employment gap shrink after adjusting for husbands’ income?',
+    'Use Employment Status Survey microdata or detailed cross-tabs to model wife non-employment ~ husband income + wife potential wage + youngest-child age + parent co-residence + commute + region, then estimate the adjusted regional gap.'),
+  question('q-causal', 'Is there a causal study of income selection among Tokyo parents?',
+    'Has any causal study directly measured the strength of income selection among Tokyo families with children? None was found in the source conversation.'),
+  question('q-share', 'Decompose the reported 19.1-point gap by candidate mechanism',
+    'How much of the reported 19.1-point Tokyo–Fukui gap is attributable to economic selection, grandparent support, commuting, and industry structure?'),
 ];
 
 const NODES = [...HYPOTHESES, ...MECHANISMS, ...CLAIMS, ...EVIDENCE, ...QUESTIONS];
@@ -210,68 +227,68 @@ const EDGES = [
 
   // evidence -> claim (supports / contradicts)
   edge('ed06', 'e-mukyo', 'c-gap', 'supports',
-    '東京26.4%・福井7.3%という数値が「約3.6倍」の根拠になっている。'),
+    'The reported 26.4% and 7.3% values yield the “about 3.6×” comparison.'),
   edge('ed07', 'e-tfr', 'c-marriage', 'supports',
-    '東京の合計特殊出生率が全国最低であるという、主張の前提部分を裏付ける。'),
+    'Tokyo’s reported nationally lowest total fertility rate supports a premise of the claim.'),
   edge('ed08', 'e-yuhaigu', 'c-marriage', 'supports',
-    '有配偶率そのものが東京で全国最低水準であることを示す直接的な裏付け。'),
+    'The married share itself is reported at the nation’s lowest level in Tokyo.'),
   edge('ed09', 'e-mikon', 'c-marriage', 'supports',
-    '未婚割合の高さは有配偶率の低さと表裏の関係にある。'),
+    'A high never-married share is the complement of a low married share.'),
   edge('ed10', 'e-konin', 'c-marriage', 'contradicts',
-    '「東京は婚姻率最低」という素朴な形の主張への反証。有配偶率ベースの主張本体とは両立（フロー vs ストック）。'),
+    'This challenges the naïve claim that Tokyo has the lowest annual marriage rate; it can coexist with the stock-based married-share claim (flow versus stock).'),
   edge('ed11', 'e-shokon', 'c-marriage', 'supports',
-    '初婚年齢の高さは、ある時点で見た有配偶率を押し下げる方向に働く。'),
+    'Later first marriage tends to reduce the married share observed at a point in time.'),
   edge('ed12', 'e-sansedai', 'c-grandparent', 'supports',
-    '三世代同居率の地域差が、祖父母による育児支援インフラの差を示す指標になっている。'),
+    'Regional differences in three-generation households proxy differences in grandparent-care infrastructure.'),
   edge('ed13', 'e-fukui-doukyo', 'c-grandparent', 'supports',
-    '福井で共働き世帯の親同居率が全国平均より高いことが、祖父母支援の存在を裏付ける。'),
+    'Fukui’s above-average parent co-residence among dual-earner families supports the presence of grandparent support.'),
   edge('ed14', 'e-doukyo-shugyo', 'c-grandparent', 'supports',
-    '親との同居が妻の就業を促進するという回帰結果が、祖父母支援仮説の因果的な裏付けになっている。'),
+    'The reported regression association between parent co-residence and wives’ employment supports the grandparent-support mechanism; it does not establish causality here.'),
   edge('ed15', 'e-tsukin', 'c-commute', 'supports',
-    '通勤時間の地域差そのものが、時間コストの差の直接的な裏付けになっている。'),
+    'The regional commute-time difference directly describes a difference in time costs.'),
   edge('ed16', 'e-kaji', 'c-commute', 'supports',
-    '夫の家事・育児参加が妻の就業を左右するという結果が、時間的制約コストの重要性を補強する。'),
+    'The association between husbands’ participation at home and wives’ employment reinforces the importance of household time constraints.'),
   edge('ed17', 'e-60h', 'c-commute', 'supports',
-    '夫の長時間労働が妻のフルタイム就業を妨げるという、時間コストの直接的な裏付け。'),
+    'The reported association between husbands’ long hours and lower full-time employment among wives supports the time-cost mechanism.'),
   edge('ed18', 'e-zeimu', 'c-income', 'supports',
-    '出産前所得を揃えた上での追跡データという、交絡を排除した形の直接的な裏付け。'),
+    'The reported tax-record follow-up adjusts for wives’ pre-birth income, providing more direct—but still unverified here—support.'),
   edge('ed19', 'e-jilpt16', 'c-income', 'contradicts',
-    '上位で高い傾向はあるが単調増加ではない、という部分的反証。'),
+    'The upper quartiles are higher, but the sequence is not monotonic: a partial challenge.'),
   edge('ed20', 'e-teishotoku', 'c-income', 'supports',
-    '夫が低所得なほど妻の就業率が高いという傾向は、逆方向から見て同じ関係を裏付ける。'),
+    'The tendency for wives to work more when husbands earn less supports the same association from the opposite direction.'),
   edge('ed21', 'e-kaiki', 'c-marriage', 'supports',
-    '非正規雇用率・教育費・家賃という都市部で高い変数が有配偶率を押し下げるという回帰結果の裏付け。'),
+    'The reported regression links urban cost variables—non-regular employment, education costs, and rents—to a lower married share.'),
   // e-mikonritsu and e-kyuyo are seeded above but have no edge here — see the
   // file header (§6 named only an evidence->hypothesis edge for both, which
   // the validity matrix does not allow for any edge type).
   edge('ed22', 'e-1995', 'c-notonly', 'supports',
-    '1995年時点で既に大きな差があったとされる会話の記載が、選抜強化以前からの差という主張の根拠になっている（一次資料未照合）。'),
+    'The conversation’s report of a large gap already in 1995 supports the claim that the gap predates recent selection changes; the primary source has not been checked.'),
   edge('ed23', 'e-ishiki', 'c-values', 'supports',
-    '性別役割意識が東京圏でむしろ低いというデータが、「都会は平等志向」という単純な価値観説とは逆方向であることを示す。'),
+    'Reported lower traditional-role attitudes in the Tokyo region run against a simple urban-homemaker-preference explanation.'),
   edge('ed24', 'e-ushinai', 'c-values', 'supports',
-    '結婚・出産期の有業率低下幅が首都圏で著しく大きいことが、価値観だけでは説明できない構造の存在を示す。'),
+    'The much larger employment-rate decline during marriage and childbearing ages in Southern Kanto points to structure not captured by values alone.'),
   edge('ed25', 'e-sangyo', 'c-industry', 'supports',
-    '女性正規職員の産業構成の地域差が、地方の産業構造仮説を裏付ける。'),
+    'Regional industry differences among women in regular employment support the industry-structure hypothesis.'),
   edge('ed26', 'e-hoiku', 'c-industry', 'supports',
-    '保育所定員の多さが女性の労働参加を後押しするという結果が、継続就業を支えるインフラ面を補強する。'),
+    'The reported association between childcare capacity and women’s labor-force participation supports an infrastructure channel for continued employment.'),
 
   // claim -> hypothesis (supports / contradicts)
   edge('ed27', 'c-gap', 'h-selection', 'supports',
-    '妻無業率の大きな地域差そのものが、経済的選抜仮説が説明しようとする現象の存在を裏付ける。'),
+    'The large reported regional gap in wife non-employment is the phenomenon the economic-selection hypothesis attempts to explain.'),
   edge('ed28', 'c-marriage', 'h-selection', 'supports',
-    '有配偶率の低さという経路も、高コストによる結婚・出産ハードルという選抜仮説の機序と整合する。'),
+    'A low married share is consistent with the hypothesis’s pathway from high costs to barriers to marriage and childbearing.'),
   edge('ed29', 'c-income', 'h-selection', 'supports',
-    '夫所得と妻の非就業の関連が、高所得世帯側への選抜という仮説の機序と整合する。'),
+    'The reported association between husbands’ income and wives’ non-employment is consistent with selection toward higher-income households.'),
   edge('ed30', 'c-grandparent', 'h-model', 'supports',
-    '祖父母支援の欠如という要因が、4要因モデルの一角として直接対応する。'),
+    'Limited grandparent support is one of the four model components.'),
   edge('ed31', 'c-commute', 'h-model', 'supports',
-    '通勤・時間コストという要因が、4要因モデルの一角として直接対応する。'),
+    'Commuting and time costs are one of the four model components.'),
   edge('ed32', 'c-values', 'h-model', 'supports',
-    '価値観説の反証が、4要因モデルが価値観説に代わる説明を提示するという主張を補強する。'),
+    'Evidence against the values story supports the four-factor model as an alternative explanation.'),
   edge('ed33', 'c-industry', 'h-model', 'supports',
-    '地方の産業構造という要因が、4要因モデルの背景説明を補強する。'),
+    'Regional industry structure supplies background support for one component of the model.'),
   edge('ed34', 'c-notonly', 'h-model', 'supports',
-    '選抜単独では説明できないという主張が、複数要因を組み合わせる4要因モデルの必要性を裏付ける。'),
+    'The claim that selection alone is insufficient motivates a multi-factor model.'),
   // [D4] ed35 (c-notonly → h-selection, contradicts) REMOVED — see the file
   // header: the refuted target was "selection as the SOLE explanation," which
   // no node here asserts, and c-notonly's content already feeds h-model as a
@@ -287,13 +304,13 @@ const EDGES = [
   // whatever other edge each already carries above — the fifth, e-1995 →
   // h-selection (contradicts), was ed43; see [D4] below for its removal).
   edge('ed39', 'e-kaiki', 'h-selection', 'supports',
-    '非正規雇用率・教育費・家賃という経済的コスト変数が有配偶率を左右するという回帰結果が、経済的選抜仮説を直接裏付ける。'),
+    'The reported regression connects economic cost variables to the married share, directly supporting the economic-selection pathway.'),
   edge('ed40', 'e-mikonritsu', 'h-selection', 'supports',
-    '男性の所得が高いほど未婚率が下がるという関係が、高所得側への選抜という仮説の機序と整合する。'),
+    'The reported link between higher men’s income and lower never-married share is consistent with selection toward higher-income households.'),
   edge('ed41', 'e-kyuyo', 'h-selection', 'supports',
-    '東京の男性給与水準が全国最高であること自体が、高所得世帯が集まりやすいという選抜仮説の前提を補強する。'),
+    'Tokyo’s reported nationally highest pay for male general workers supports a premise that high-income households may be overrepresented.'),
   edge('ed42', 'e-ishiki', 'h-model', 'supports',
-    '性別役割意識が東京圏でむしろ低いというデータが、価値観説を退け4要因モデルを支持する材料になる。'),
+    'Reported lower traditional-role attitudes in the Tokyo region weigh against the values story and support seeking structural explanations.'),
   // [D4] ed43 (e-1995 → h-selection, contradicts) REMOVED — same reasoning as
   // ed35 above: h-selection does not assert selection is the SOLE
   // explanation, so a "differences predate selection" finding does not
@@ -301,7 +318,7 @@ const EDGES = [
 ];
 
 export const SEED = {
-  topic: '会話で報告された東京の『専業主婦率』は、どの年・母集団・指標定義で他地域より高いのか。差が確認できる場合、経済的選抜・家族構造・時間コストはどこまで説明しうるか（一次資料未照合）',
+  topic: 'For which years, populations, and indicator definitions is Tokyo’s reported homemaker share higher than other regions? If a difference holds, how much can economic selection, family structure, and time costs explain? (Primary sources not yet checked.)',
   nodes: NODES,
   edges: EDGES,
 };
