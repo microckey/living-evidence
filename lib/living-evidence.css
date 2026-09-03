@@ -110,6 +110,24 @@
 .le-human .le-actor { background: var(--le-good); color: #fff; }
 .le-summary { color: var(--le-ink); }
 
+/* reproducibility / integrity receipt */
+.le-integrity {
+  border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent);
+  border-radius: 10px; background: var(--le-card); padding: 0.8em 1em;
+}
+.le-integrity-note { margin: 0 0 0.35em; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.78em; overflow-wrap: anywhere; }
+.le-integrity-limits { margin: 0 0 0.7em; color: var(--le-muted); font-size: 0.8em; }
+.le-clear-session { margin-top: 0.7em; color: var(--le-muted); }
+
+/* local authoring import */
+.le-import {
+  border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent);
+  border-radius: 10px; background: var(--le-card); padding: 0.85em 1em;
+}
+.le-import input[type="file"] { display: block; max-width: 100%; margin: 0.65em 0; font: inherit; font-size: 0.88em; }
+.le-import-status { margin: 0.45em 0 0; color: var(--le-muted); font-size: 0.84em; }
+.le-import-status.le-import-error { color: var(--le-bad); }
+
 /* pending proposal cards */
 .le-pending-card { border: 2px dashed var(--le-warn); border-radius: 12px; padding: 1em; margin: 1em 0; background: var(--le-card); }
 .le-pending-head { font-weight: 700; margin-bottom: 0.5em; }

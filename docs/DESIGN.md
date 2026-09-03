@@ -1,5 +1,9 @@
 # Living Evidence Atlas — design document
 
+> Historical design record. The implemented v0.2 contract and current trust
+> boundaries are in [`SPEC.md`](SPEC.md); where this document describes v0.1 or
+> planned milestones, it is not the source of truth for the shipped product.
+
 Status: **v3** — v2 was reviewed by Codex/GPT-5.6 Sol
 ([full review](DESIGN-REVIEW-CODEX.md); verdict: *"approve the Atlas as a
 vision, reject §8 as an execution plan in its current form"*). v3 adopts that

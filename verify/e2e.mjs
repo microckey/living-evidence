@@ -37,11 +37,28 @@ try {
   const callErr = (name, args) => page.evaluate(([n, a]) => {
     try { window.LivingEvidence.invokeTool(n, a); return null; } catch (e) { return e.message; }
   }, [name, args]);
+  const proposal = (overrides = {}) => ({
+    author: 'E2E Replication Team', year: 1985, yi: 0.05, vi: 0.02, weeks: 3,
+    setting: 'group', tester: 'blind', n1i: 100, n2i: 100,
+    source: 'E2E fixture — not a real study',
+    quote: 'd = 0.05 (SE 0.14)',
+    source_locator: 'E2E fixture, table 1, row 1',
+    derivation: 'd computed from the reported t(198) = 0.35 and group sizes',
+    study_design: 'randomized expectancy-induction experiment',
+    outcome: 'pupil IQ',
+    timepoint: 'post-intervention',
+    experiment_id: 'e2e-experiment-1',
+    smd_variant: 'Hedges_g',
+    effect_direction: 'positive = higher measured IQ in the expectancy group than control',
+    collection_frame: 'Experiments included in the Raudenbush (1984) teacher-expectancy synthesis',
+    risk_of_bias_status: 'not_assessed',
+    ...overrides,
+  });
 
   // -- registration surface --
   const tools = await page.evaluate(() => window.LivingEvidence.tools.map((t) => t.name));
-  check('12 tools exposed', tools.length === 12, tools.join(','));
-  for (const t of ['get_document_overview', 'evaluate_claim', 'propose_study', 'get_audit_log']) {
+  check('15 tools exposed', tools.length === 15, tools.join(','));
+  for (const t of ['get_document_overview', 'get_data_manifest', 'evaluate_claim', 'propose_study', 'get_audit_log', 'get_reproducibility_status', 'create_reproducibility_receipt']) {
     check(`tool present: ${t}`, tools.includes(t));
   }
   // -- the descriptions ARE the agent-facing contract: what a tool claims about
@@ -66,10 +83,11 @@ try {
     /FE assumes one common effect; tau2 is null by model assumption, not estimated as zero/.test(toolMeta.run_meta_analysis.description)
     && /two-sided test of the pooled effect against zero/.test(toolMeta.run_meta_analysis.description),
     toolMeta.run_meta_analysis.description);
-  check('get_audit_log calls the digest a checksum, not tamper evidence',
-    /non-cryptographic FNV-1a checksum/.test(toolMeta.get_audit_log.description)
-    && /not tamper evidence/.test(toolMeta.get_audit_log.description)
-    && /session-local/.test(toolMeta.get_audit_log.description),
+  check('get_audit_log accurately scopes its persistent SHA-256 chain',
+    /reload-persistent/.test(toolMeta.get_audit_log.description)
+    && /SHA-256/.test(toolMeta.get_audit_log.description)
+    && /does not prove author identity/.test(toolMeta.get_audit_log.description)
+    && /trusted timestamp/.test(toolMeta.get_audit_log.description),
     toolMeta.get_audit_log.description);
 
   const proposeSchema = await page.evaluate(() => window.LivingEvidence.tools.find((t) => t.name === 'propose_study').inputSchema);
@@ -77,18 +95,22 @@ try {
     proposeSchema.properties.year.type === 'integer' && proposeSchema.properties.year.minimum === 1900 && proposeSchema.properties.year.maximum === 2100
     && proposeSchema.properties.vi.exclusiveMinimum === 0 && proposeSchema.properties.weeks.minimum === 0
     && proposeSchema.properties.n1i.type === 'integer' && proposeSchema.properties.n1i.minimum === 1
-    && proposeSchema.properties.source.minLength === 1 && proposeSchema.properties.quote.minLength === 1,
+    && proposeSchema.properties.source.minLength === 1 && proposeSchema.properties.quote.minLength === 1
+    && proposeSchema.required.includes('source_locator') && proposeSchema.required.includes('derivation')
+    && proposeSchema.required.includes('experiment_id') && proposeSchema.required.includes('risk_of_bias_status'),
     JSON.stringify(proposeSchema.properties));
-  check('propose_study documents the SMD direction and the optional derivation',
-    /positive = higher measured IQ in the expectancy group than control/.test(proposeSchema.properties.yi.description)
-    && /how yi\/vi were derived when not directly reported/.test(proposeSchema.properties.derivation.description)
+  check('propose_study documents the estimand and required derivation',
+    /what a positive yi means/.test(proposeSchema.properties.effect_direction.description)
+    && /how yi and vi were derived/.test(proposeSchema.properties.derivation.description)
+    && proposeSchema.properties.smd_variant.enum.includes('Hedges_g')
+    && /unique experiment id/.test(proposeSchema.properties.experiment_id.description)
     && /expectancy-group sample size/.test(proposeSchema.properties.n1i.description),
-    JSON.stringify(proposeSchema.properties.yi));
+    JSON.stringify(proposeSchema.properties));
 
   const agentStatus = await page.evaluate(() => window.LivingEvidence.state.agent);
   check('WebMCP absent in test browser handled gracefully', agentStatus.active === false, JSON.stringify(agentStatus));
   check('registration status is explicitly "absent" (not a silent false)', agentStatus.status === 'absent', JSON.stringify(agentStatus));
-  check('absent status reports 0/12 registered', agentStatus.registered === 0 && agentStatus.total === 12, JSON.stringify(agentStatus));
+  check('absent status reports 0/15 registered', agentStatus.registered === 0 && agentStatus.total === 15, JSON.stringify(agentStatus));
   const statusText = await page.textContent('#le-status');
   check('status banner explains fallback', /Tool console/.test(statusText), statusText);
 
@@ -96,6 +118,36 @@ try {
   check('bound k = 19', (await page.textContent('[data-le-bind="k"]')) === '19');
   check('bound estimate = 0.084', (await page.textContent('[data-le-bind="estimate"]')) === '0.084');
   check('main forest plot rendered', await page.locator('#le-main-figure svg').count() === 1);
+
+  // -- frozen PDF vs WebMCP benchmark: neutral until real paired runs exist --
+  await page.waitForFunction(() => document.querySelector('[data-benchmark-hash]')?.textContent !== 'loading…');
+  const benchmarkStatus = await page.textContent('[data-benchmark-status]');
+  check('benchmark starts with no superiority claim',
+    /No runs recorded/.test(benchmarkStatus) && /no claim that WebMCP outperforms PDF/.test(benchmarkStatus), benchmarkStatus);
+  check('both benchmark answer boxes start empty',
+    await page.inputValue('[data-benchmark-answer="pdf"]') === ''
+    && await page.inputValue('[data-benchmark-answer="webmcp"]') === '');
+  check('frozen baseline hash is displayed',
+    (await page.textContent('[data-benchmark-hash]')) === '9ef53847f62ab86adb322876c21a7a0b008baa19f2425f32004819ccfa82eb49');
+  const pdfResponse = await page.request.get(`http://127.0.0.1:${PORT}/docs/benchmark-baseline.pdf`);
+  const pdfBytes = await pdfResponse.body();
+  check('frozen PDF is served as a real PDF', pdfResponse.ok() && /application\/pdf/.test(pdfResponse.headers()['content-type'] || '')
+    && pdfBytes.subarray(0, 5).toString() === '%PDF-', `${pdfResponse.status()} ${pdfResponse.headers()['content-type']}`);
+  const benchmarkAuditBefore = (await call('get_audit_log', {})).entries.length;
+  const perfectBenchmark = {
+    overall: { k: 19, estimate: 0.0837, ci_lower: -0.0175, ci_upper: 0.1849, p: 0.1051 },
+    exclude_s04: { k: 18, estimate: 0.0577, ci_lower: -0.0292, ci_upper: 0.1446, p: 0.1929, excluded: ['s04'] },
+    bias: { egger_p: 0.057426, rule_outcome: 'inconclusive' },
+  };
+  await page.fill('[data-benchmark-answer="pdf"]', JSON.stringify(perfectBenchmark));
+  await page.click('[data-benchmark-score="pdf"]');
+  check('perfect benchmark answer scores 13/13', /13\/13 fields correct/.test(await page.textContent('[data-benchmark-result="pdf"]')));
+  await page.fill('[data-benchmark-answer="webmcp"]', '{bad json');
+  await page.click('[data-benchmark-score="webmcp"]');
+  check('malformed benchmark answer is rejected locally', /Invalid JSON/.test(await page.textContent('[data-benchmark-result="webmcp"]')));
+  const benchmarkAuditAfter = (await call('get_audit_log', {})).entries.length;
+  check('benchmark scoring never enters scientific audit ledger', benchmarkAuditAfter === benchmarkAuditBefore,
+    `${benchmarkAuditBefore} → ${benchmarkAuditAfter}`);
 
   // -- overview --
   const ov = await call('get_document_overview', {});
@@ -112,11 +164,12 @@ try {
   check('overview scopes what metafor validation proves',
     ov.rules_of_engagement.some((r) => /numerical reproduction against the reference implementation, not the data or model assumptions/.test(r)),
     JSON.stringify(ov.rules_of_engagement));
-  check('overview states which calls are ledgered', ov.rules_of_engagement.some((r) => /pure reads .* are not/.test(r)), JSON.stringify(ov.rules_of_engagement));
+  check('overview states which calls are ledgered', ov.rules_of_engagement.some((r) => /pure reads are not/i.test(r)), JSON.stringify(ov.rules_of_engagement));
   // C1: a badge is the output of one authored rule, and the response says so.
-  check('overview carries the verdict scope',
-    ov.verdict_scope === 'authored statistical rule only — not an independent judgment of truth, validity, or bias'
-    && ov.rules_of_engagement.some((r) => /authored statistical rule only/.test(r)), String(ov.verdict_scope));
+  const expectedScope = 'document-registered rule outcome only — not an independent judgment of truth, validity, risk of bias, or evidence quality';
+  check('overview carries the registered-rule scope',
+    ov.rule_outcome_scope === expectedScope && ov.verdict_scope === expectedScope
+    && ov.rules_of_engagement.some((r) => /document-registered rule outcome only/.test(r)), String(ov.rule_outcome_scope));
   check('overview orients the agent inside the suite',
     ov.suite_context.you_are_here === 'exemplar' && /workspace\.html/.test(ov.suite_context.workspace) && /atlas\.html/.test(ov.suite_context.atlas),
     JSON.stringify(ov.suite_context));
@@ -129,8 +182,8 @@ try {
   // -- claims are DATA: list_claims exposes the machine-checkable AST --
   const cl = await call('list_claims', {});
   check('list_claims returns 6 claims', cl.claims.length === 6);
-  check('list_claims states what a verdict is scoped to',
-    cl.verdict_scope === 'authored statistical rule only — not an independent judgment of truth, validity, or bias', String(cl.verdict_scope));
+  check('list_claims states what a registered-rule outcome is scoped to',
+    cl.rule_outcome_scope === expectedScope && cl.verdict_scope === expectedScope, String(cl.rule_outcome_scope));
   check('every claim ships its rule AST', cl.claims.every((c) => c.machine_check && Array.isArray(c.machine_check.verdicts) && c.machine_check.verdicts.length >= 2),
     JSON.stringify(cl.claims.map((c) => c.id)));
   check('every AST ends in a default verdict', cl.claims.every((c) => c.machine_check.verdicts.at(-1).default === true));
@@ -146,6 +199,31 @@ try {
   check('c-window AST carries its focus selector', windowClaim.machine_check.focus?.match_substring === '≤ 1', JSON.stringify(windowClaim.machine_check.focus));
   check('untested claims are not stale and have no evaluated_version',
     cl.claims.every((c) => c.stale === false && c.evaluated_version === null && c.evidence_version === 1));
+  check('untested claims expose the canonical not_run outcome',
+    cl.claims.every((c) => c.rule_outcome === 'not_run' && c.outcome_type === 'document_registered_rule'));
+
+  // -- citeable manifest and unit/provenance contract --
+  const manifest = await call('get_data_manifest', {});
+  check('manifest identifies 19 records from 18 experiments',
+    manifest.dataset.record_count === 19 && manifest.dataset.experiment_count === 18, JSON.stringify(manifest.dataset));
+  check('manifest makes current verification gaps machine-readable',
+    manifest.evidence_quality.secondary_source_transcriptions === 19
+    && manifest.evidence_quality.primary_source_checked === 0
+    && manifest.evidence_quality.effect_size_derivation_checked === 0
+    && manifest.evidence_quality.structured_risk_of_bias_assessment_supplied_unverified === 0,
+    JSON.stringify(manifest.evidence_quality));
+  check('manifest has a full SHA-256 scientific-state id', /^sha256:[0-9a-f]{64}$/.test(manifest.scientific_state_sha256), manifest.scientific_state_sha256);
+  const manifestWithRecords = await call('get_data_manifest', { include_records: true });
+  check('full manifest carries all 19 traceable records', manifestWithRecords.records_included === true && manifestWithRecords.dataset.studies.length === 19);
+  const baseStudies = await call('get_studies', {});
+  const s04 = baseStudies.studies.find((study) => study.id === 's04');
+  const s05 = baseStudies.studies.find((study) => study.id === 's05');
+  check('s04/s05 explicitly share an experiment cluster', s04.experiment_id === s05.experiment_id
+    && new Set(baseStudies.studies.map((study) => study.experiment_id)).size === 18, `${s04.experiment_id} / ${s05.experiment_id}`);
+  check('base records disclose secondary provenance and unassessed RoB',
+    baseStudies.studies.every((study) => study.provenance.source_type === 'secondary_dataset'
+      && study.provenance.source_locator && study.provenance.effect_size_derivation_checked === false
+      && study.risk_of_bias.status === 'not_assessed'));
 
   // -- pure reads are NOT ledgered (the contract says so; prove it) --
   const beforeReads = (await call('get_audit_log', {})).entries.length;
@@ -165,7 +243,7 @@ try {
 
   // -- structured ledger envelope --
   const log1 = await call('get_audit_log', {});
-  const REQUIRED_KEYS = ['run', 'time', 'actor', 'kind', 'tool', 'inputs', 'summary', 'evidence_version', 'result_digest'];
+  const REQUIRED_KEYS = ['run', 'time', 'actor', 'kind', 'tool', 'inputs', 'summary', 'evidence_version', 'result_digest', 'previous_entry_hash', 'entry_hash'];
   check('every entry carries the full envelope',
     log1.entries.every((e) => REQUIRED_KEYS.every((k) => k in e)), JSON.stringify(log1.entries[0]));
   check('every entry has actor + evidence_version',
@@ -176,9 +254,27 @@ try {
   const analysisEntry = log1.entries.find((e) => e.tool === 'run_meta_analysis');
   check('analysis entry attributed to the agent', analysisEntry.actor === 'agent', JSON.stringify(analysisEntry));
   check('analysis entry records its inputs', analysisEntry.inputs.method === 'REML', JSON.stringify(analysisEntry.inputs));
-  check('analysis entry carries an 8-hex result digest', /^[0-9a-f]{8}$/.test(analysisEntry.result_digest), String(analysisEntry.result_digest));
+  check('analysis entry carries a full SHA-256 result digest', /^sha256:[0-9a-f]{64}$/.test(analysisEntry.result_digest), String(analysisEntry.result_digest));
   const rowTitle = await page.locator('#le-ledger .le-ledger-row').last().getAttribute('title');
-  check('ledger row exposes digest + inputs in its title', /^digest [0-9a-f]{8} · inputs \{/.test(rowTitle || ''), rowTitle);
+  check('ledger row exposes entry hash, result hash and inputs in its title',
+    /^entry sha256:[0-9a-f]{64} · result sha256:[0-9a-f]{64} · inputs \{/.test(rowTitle || ''), rowTitle);
+
+  // A receipt signs the scientific-state id and an audit prefix. The key is
+  // deliberately self-generated, so the API must state the assurance limit.
+  const receipt = await call('create_reproducibility_receipt', {});
+  check('receipt signs the current state with ECDSA P-256',
+    receipt.receipt_version === 'living-evidence-receipt/1'
+    && receipt.signature?.algorithm === 'ECDSA-P256-SHA256'
+    && /^sha256:[0-9a-f]{64}$/.test(receipt.signer_key_fingerprint)
+    && /^[A-Za-z0-9_-]+$/.test(receipt.signature?.value || ''), JSON.stringify(receipt));
+  check('live receipt intentionally has no artifact hash', receipt.artifact_sha256 === null, String(receipt.artifact_sha256));
+  check('receipt clearly disclaims unanchored authorship', /self-generated/.test(receipt.note) && /Pin signer_key_fingerprint/.test(receipt.note), receipt.note);
+  const receiptStatus = await call('get_reproducibility_status', {});
+  check('fresh receipt verifies against the current state and audit prefix',
+    receiptStatus.status === 'matches_self_signed_session_receipt'
+    && receiptStatus.latest_receipt_verification.status === 'valid_current_state'
+    && receiptStatus.latest_receipt_verification.signature_status === 'valid'
+    && receiptStatus.audit_chain.valid === true, JSON.stringify(receiptStatus));
 
   // digests are deterministic for the same evidence base, and sensitive to the model
   await call('run_meta_analysis', { method: 'REML' });
@@ -194,20 +290,21 @@ try {
   check('exclude drops k to 18', reEx.k === 18, String(reEx.k));
   check('excluding the outlier lowers the estimate', reEx.estimate < re.estimate, `${reEx.estimate} vs ${re.estimate}`);
 
-  // -- claims: all three verdict kinds appear --
+  // -- claims: all three canonical registered-rule outcomes appear --
   const c1 = await call('evaluate_claim', { claim_id: 'c-textbook' });
-  check('textbook claim CHALLENGED', c1.verdict === 'challenged', JSON.stringify(c1));
+  check('textbook registered rule FAILS', c1.rule_outcome === 'failed' && c1.verdict === 'challenged', JSON.stringify(c1));
   check('verdict response carries the staleness quartet',
     c1.stale === false && c1.evaluated_version === 1 && c1.evidence_version === 1 && c1.status === c1.verdict,
     JSON.stringify({ stale: c1.stale, ev: c1.evaluated_version, cur: c1.evidence_version, status: c1.status }));
   check('verdict reason is rendered from the AST template', /^pooled SMD 0\.0837 \[/.test(c1.reason), c1.reason);
-  check('the verdict response scopes itself', c1.verdict_scope === cl.verdict_scope, String(c1.verdict_scope));
-  check('challenged chip in prose', await page.locator('[data-claim="c-textbook"] .le-chip-challenged').count() === 1);
+  check('the rule-outcome response scopes itself', c1.rule_outcome_scope === cl.rule_outcome_scope, String(c1.rule_outcome_scope));
+  check('failed-rule chip in prose', await page.locator('[data-claim="c-textbook"] .le-chip-challenged').count() === 1
+    && /rule failed/.test(await page.textContent('[data-claim="c-textbook"] .le-chip-challenged')));
   const c2 = await call('evaluate_claim', { claim_id: 'c-bias' });
-  check('bias claim NUANCED (Egger borderline)', c2.verdict === 'nuanced', JSON.stringify(c2.reason));
-  for (const [id, expect] of [['c-overall', 'supported'], ['c-moderator', 'supported'], ['c-window', 'supported'], ['c-robust', 'supported']]) {
+  check('bias registered rule INCONCLUSIVE (Egger borderline)', c2.rule_outcome === 'inconclusive' && c2.verdict === 'nuanced', JSON.stringify(c2.reason));
+  for (const [id, expectLegacy] of [['c-overall', 'supported'], ['c-moderator', 'supported'], ['c-window', 'supported'], ['c-robust', 'supported']]) {
     const r = await call('evaluate_claim', { claim_id: id });
-    check(`claim ${id} ${expect}`, r.verdict === expect, JSON.stringify(r.reason));
+    check(`claim ${id} registered rule passed`, r.rule_outcome === 'passed' && r.verdict === expectLegacy, JSON.stringify(r.reason));
   }
   const badgeCount = await page.locator('.le-chip').count();
   check('6 verdict badges visible in prose', badgeCount === 6, String(badgeCount));
@@ -215,7 +312,7 @@ try {
   const unknownClaim = await callErr('evaluate_claim', { claim_id: 'nope' });
   check('unknown claim id errors helpfully', /list_claims/.test(unknownClaim || ''), unknownClaim);
   const claimEntry = (await call('get_audit_log', {})).entries.find((e) => e.tool === 'evaluate_claim');
-  check('claim verdicts are ledgered with their claim id', claimEntry.inputs.claim_id === 'c-textbook' && claimEntry.kind === 'claim', JSON.stringify(claimEntry));
+  check('registered-rule outcomes are ledgered with their claim id', claimEntry.inputs.claim_id === 'c-textbook' && claimEntry.kind === 'claim', JSON.stringify(claimEntry));
 
   // -- moderator analysis reproduces published result through the tool layer --
   const mr = await call('meta_regression', { moderator: 'weeks', cap: 3 });
@@ -233,29 +330,27 @@ try {
     /split_at is only meaningful for numeric fields/.test(splitOnCategorical || ''), splitOnCategorical);
 
   // -- propose_study: validation, provenance, pending, human approval --
-  const bad = await callErr('propose_study', { author: 'X', year: 1985, yi: 0.1, vi: -1, weeks: 0, source: 's', quote: 'q' });
+  const bad = await callErr('propose_study', proposal({ author: 'X', vi: -1, experiment_id: 'e2e-bad-vi' }));
   check('invalid vi rejected', /vi must be/.test(bad || ''), bad);
-  const noQuote = await callErr('propose_study', { author: 'No Quote', year: 1985, yi: 0.1, vi: 0.02, weeks: 0, source: 'a citation' });
+  const noQuote = await callErr('propose_study', proposal({ author: 'No Quote', quote: undefined, experiment_id: 'e2e-no-quote' }));
   check('proposal without a quote rejected', /missing required field: quote/.test(noQuote || ''), noQuote);
-  const noSource = await callErr('propose_study', { author: 'No Source', year: 1985, yi: 0.1, vi: 0.02, weeks: 0, quote: 'd = 0.10' });
+  const noSource = await callErr('propose_study', proposal({ author: 'No Source', source: undefined, experiment_id: 'e2e-no-source' }));
   check('proposal without a source rejected', /missing required field: source/.test(noSource || ''), noSource);
-  const dup = await callErr('propose_study', { author: 'Maxwell', year: 1970, yi: 0.80, vi: 0.063, weeks: 1, source: 'dup', quote: 'd = 0.80' });
+  const dup = await callErr('propose_study', proposal({
+    author: 'Maxwell', year: 1970, yi: 0.80, vi: 0.063, weeks: 1,
+    source: 'duplicate fixture', quote: 'd = 0.80', experiment_id: 'e2e-exact-duplicate',
+  }));
   check('exact duplicate rejected', /duplicate/.test(dup || ''), dup);
   // The runtime enforces the same integer bounds the input schema declares — a schema
   // the handler does not back is documentation, not a contract.
-  const fracYear = await callErr('propose_study', { author: 'Fractional', year: 1985.5, yi: 0.1, vi: 0.02, weeks: 0, source: 's', quote: 'q' });
+  const fracYear = await callErr('propose_study', proposal({ author: 'Fractional', year: 1985.5, experiment_id: 'e2e-fractional-year' }));
   check('a non-integer year is rejected', /year must be a whole year/.test(fracYear || ''), fracYear);
-  const fracN = await callErr('propose_study', { author: 'Fractional N', year: 1985, yi: 0.1, vi: 0.02, weeks: 0, n1i: 12.5, source: 's', quote: 'q' });
+  const fracN = await callErr('propose_study', proposal({ author: 'Fractional N', n1i: 12.5, experiment_id: 'e2e-fractional-n' }));
   check('a fractional group size is rejected', /n1i must be a whole sample size/.test(fracN || ''), fracN);
 
-  const prop = await call('propose_study', {
-    author: 'E2E Replication Team', year: 1985, yi: 0.05, vi: 0.02, weeks: 3,
-    setting: 'group', tester: 'blind', n1i: 100, n2i: 100,
-    source: 'E2E fixture — not a real study', quote: 'd = 0.05 (SE 0.14)',
-    derivation: 'd computed from the reported t(198) = 0.35 and group sizes',
-  });
+  const prop = await call('propose_study', proposal());
   check('proposal pending, not included', prop.status === 'pending_human_approval', JSON.stringify(prop));
-  check('proposal returns a record hash', /^[0-9a-f]{8}$/.test(prop.record_hash || ''), String(prop.record_hash));
+  check('proposal returns a SHA-256 record hash', /^sha256:[0-9a-f]{64}$/.test(prop.record_hash || ''), String(prop.record_hash));
   // Present-and-null, not absent: an absent key reads as "not checked".
   check('unrelated proposal reports possible_duplicate_of: null',
     'possible_duplicate_of' in prop && prop.possible_duplicate_of === null, JSON.stringify(prop));
@@ -308,11 +403,15 @@ try {
     approvedRec.provenance.derivation === 'd computed from the reported t(198) = 0.35 and group sizes',
     JSON.stringify(approvedRec.provenance.derivation));
   const baseRec = studiesAfter.studies.find((s) => s.id === 's01');
-  check('original records keep their provenance string', baseRec.provenance === 'original evidence base', JSON.stringify(baseRec.provenance));
+  check('original records keep structured, explicitly unverified provenance',
+    baseRec.provenance.source_type === 'secondary_dataset'
+    && baseRec.provenance.source_locator === 'dat.raudenbush1985 row 1 (s01)'
+    && baseRec.provenance.primary_source_checked === false
+    && baseRec.risk_of_bias.status === 'not_assessed', JSON.stringify(baseRec));
 
   // re-evaluate after evidence change: badge refreshes, stale cleared for that claim
   const c1b = await call('evaluate_claim', { claim_id: 'c-textbook' });
-  check('re-evaluation works on k=20', ['challenged', 'supported', 'nuanced'].includes(c1b.verdict), JSON.stringify(c1b.verdict));
+  check('re-evaluation works on k=20', ['failed', 'passed', 'inconclusive'].includes(c1b.rule_outcome), JSON.stringify(c1b.rule_outcome));
   check('re-evaluated verdict reports the current evidence version', c1b.stale === false && c1b.evaluated_version === 2, JSON.stringify(c1b));
   check('re-evaluated chip not stale', await page.locator('[data-claim="c-textbook"] .le-chip-stale').count() === 0);
   const claimsMixed = (await call('list_claims', {})).claims;
@@ -322,11 +421,12 @@ try {
     JSON.stringify(claimsMixed.map((c) => [c.id, c.stale])));
 
   // -- same author+year, different effect size: flagged, not rejected --
-  const nearDup = await call('propose_study', {
+  const nearDup = await call('propose_study', proposal({
     author: 'Maxwell', year: 1970, yi: 0.42, vi: 0.055, weeks: 1,
     setting: 'group', tester: 'blind', source: 'E2E fixture — second experiment in the same paper',
     quote: 'Experiment 2: d = 0.42 (SE 0.23)',
-  });
+    source_locator: 'E2E fixture, experiment 2, row 1', experiment_id: 'e2e-maxwell-experiment-2',
+  }));
   check('same author+year with a different yi is accepted', nearDup.status === 'pending_human_approval', JSON.stringify(nearDup));
   check('…but flagged with possible_duplicate_of', /^s\d\d$/.test(nearDup.possible_duplicate_of || ''), JSON.stringify(nearDup.possible_duplicate_of));
   check('…and the message tells the agent to say so', /already in the evidence base/.test(nearDup.message), nearDup.message);
@@ -368,11 +468,12 @@ try {
     JSON.stringify([...new Set(log.entries.map((e) => e.actor))]));
   check('evidence_version only ever moves forward', log.entries.every((e, i) => i === 0 || e.evidence_version >= log.entries[i - 1].evidence_version));
   check('mutation and analysis entries all carry a digest',
-    log.entries.filter((e) => ['analysis', 'claim', 'proposal', 'approval'].includes(e.kind)).every((e) => /^[0-9a-f]{8}$/.test(e.result_digest || '')),
+    log.entries.filter((e) => ['analysis', 'claim', 'proposal', 'approval', 'receipt'].includes(e.kind)).every((e) => /^sha256:[0-9a-f]{64}$/.test(e.result_digest || '')),
     JSON.stringify(log.entries.filter((e) => !e.result_digest).map((e) => e.kind)));
+  check('entire audit hash chain verifies', log.chain.valid === true && log.chain.checked_entries === log.entries.length, JSON.stringify(log.chain));
 
   // -- tool console present --
-  check('tool console select lists tools', await page.locator('#le-console select option').count() === 12);
+  check('tool console select lists tools', await page.locator('#le-console select option').count() === 15);
 
   // -- no probe hooks left in shipping files --
   const probes = await page.evaluate(() => Object.keys(window).filter((k) => k.startsWith('__')));

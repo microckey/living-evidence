@@ -132,6 +132,16 @@ try {
   check('registration status is explicitly "absent" (not a silent false)', agentStatus.status === 'absent', JSON.stringify(agentStatus));
   check('absent status reports 0/11 registered', agentStatus.registered === 0 && agentStatus.total === 11, JSON.stringify(agentStatus));
   check('status banner explains the fallback', /Tool console/.test(await page.textContent('#board-status')));
+  const pageFraming = (await page.textContent('body')).replace(/\s+/g, ' ');
+  check('the page visibly demotes the Board to an experimental, unverified appendix',
+    /Living Evidence Board — experimental appendix/.test(await page.textContent('h1'))
+    && /unverified conversation-to-graph sandbox/.test(pageFraming)
+    && /not part of the Pygmalion meta-analysis, its evidence base, numerical reference checks, or software verification suite/.test(pageFraming),
+    pageFraming.slice(0, 700));
+  check('the page says human acceptance is local graph inclusion, not scientific verification',
+    /Human approval means accepted onto this local board/.test(pageFraming)
+    && /does not verify the source, quote, edge, or claim/.test(pageFraming),
+    pageFraming.slice(0, 1000));
   const nodeCount = await page.locator('#board-map [data-node]').count();
   check('exactly 40 nodes rendered', nodeCount === 40, String(nodeCount));
   const nodeTypeCounts = await page.evaluate(() => {
@@ -336,7 +346,13 @@ try {
     source_locator: '会話ログの中盤',
   });
   check('a valid propose_node returns pending_human_approval', propNode.status === 'pending_human_approval', JSON.stringify(propNode));
+  check('the proposal response distinguishes local acceptance from verification',
+    /Human approval adds the node to this local graph/.test(propNode.message)
+    && /does not verify any source, quote, edge, or claim/.test(propNode.message),
+    propNode.message);
   check('a pending-node card is rendered', await page.locator(`#le-pending-node-${propNode.node_id}`).count() === 1);
+  check('the pending action is labelled as local-board acceptance, not scientific approval',
+    await page.locator(`#le-pending-node-${propNode.node_id} .le-btn-approve`).textContent() === 'Accept onto local board');
   check('the pending section becomes visible', await page.locator('#pending-section.le-has-pending, #pending-section:has(.le-pending-card)').count() >= 1);
   const pendingDetail = await call('get_node', { node_id: propNode.node_id });
   check('quote_origin defaults to "conversation" when omitted, stored on provenance (D7)',
@@ -345,6 +361,13 @@ try {
     pendingDetail.provenance?.source_locator === '会話ログの中盤', JSON.stringify(pendingDetail.provenance));
   check('a still-pending evidence node has no verification label yet (stamped only on approval, D6)',
     pendingDetail.verification == null, JSON.stringify(pendingDetail.verification));
+  await call('focus_node', { node_id: propNode.node_id });
+  const pendingPanel = (await page.textContent('#board-panel')).replace(/\s+/g, ' ');
+  check('the pending detail panel renders quote provenance and says acceptance is not verification',
+    /quote_originconversation/.test(pendingPanel)
+    && /source_locator会話ログの中盤/.test(pendingPanel)
+    && /acceptance is not verification/.test(pendingPanel),
+    pendingPanel);
   // propose_edge from a still-PENDING node must be refused — an edge can only
   // point at something already on the board (seed or previously approved).
   const notYetOnBoard = await callErr('propose_edge', { from: propNode.node_id, to: 'c-income', type: 'supports' });
@@ -363,6 +386,12 @@ try {
   const versionBeforeEdge = await boardVersion();
   const propEdge2 = await call('propose_edge', { from: propNode.node_id, to: 'c-income', type: 'supports', rationale: 'e2eテスト用の根拠。' });
   check('propose_edge now succeeds once its "from" node is approved', propEdge2.status === 'pending_human_approval', JSON.stringify(propEdge2));
+  check('the edge proposal response also distinguishes acceptance from verification',
+    /Human approval adds the edge to this local graph/.test(propEdge2.message)
+    && /does not verify the relation or either endpoint/.test(propEdge2.message),
+    propEdge2.message);
+  check('the edge action is labelled as local-board acceptance too',
+    await page.locator(`#le-pending-edge-${propEdge2.edge_id} .le-btn-approve`).textContent() === 'Accept onto local board');
   const incomeBefore = await call('get_node', { node_id: 'c-income' });
   await page.locator(`#le-pending-edge-${propEdge2.edge_id} .le-btn-approve`).click();
   await page.waitForTimeout(100);
@@ -538,9 +567,18 @@ try {
     /non-cryptographic FNV-1a checksum/.test(auditDesc) && /not tamper evidence/.test(auditDesc) && /session-local/.test(auditDesc), auditDesc);
   const overview8 = await call('board_overview', {});
   check('board_overview states the tally-bookkeeping scope', overview8.tally_scope === TALLY_SCOPE, overview8.tally_scope);
-  check('board_overview places the page in the suite, INCLUDING its own board line (D10)',
+  check('board_overview machine-readably marks this as an unverified experimental appendix',
+    overview8.page === 'Living Evidence Board — experimental appendix'
+    && overview8.status === 'experimental_appendix'
+    && overview8.scientific_evidence_status === 'unverified_seed_not_part_of_exemplar'
+    && /accepts an item onto this local graph/.test(overview8.approval_semantics)
+    && /does not verify its source, quote, edge, or claim/.test(overview8.approval_semantics),
+    JSON.stringify({ page: overview8.page, status: overview8.status, scientific_evidence_status: overview8.scientific_evidence_status, approval_semantics: overview8.approval_semantics }));
+  check('board_overview places the page in the suite and demotes its own board line',
     overview8.suite_context.you_are_here === 'board' && /index\.html/.test(overview8.suite_context.exemplar) && /atlas\.html/.test(overview8.suite_context.atlas)
-    && /board\.html/.test(overview8.suite_context.board) && /does not propagate/.test(overview8.suite_context.board),
+    && /board\.html — experimental appendix/.test(overview8.suite_context.board)
+    && /unverified conversation-to-graph sandbox/.test(overview8.suite_context.board)
+    && /not part of the exemplar/.test(overview8.suite_context.board) && /numerical\/software verification/.test(overview8.suite_context.board),
     JSON.stringify(overview8.suite_context));
   check('board_overview.suggested_flow is the fixed five-step sequence (D8): propose -> approve node -> propose edge -> approve edge -> diagnostics again',
     Array.isArray(overview8.suggested_flow) && overview8.suggested_flow.length >= 3, JSON.stringify(overview8.suggested_flow));
@@ -566,6 +604,10 @@ try {
     overview8.honesty.some((s) => /endpoint\/type compatibility matrix/.test(s))
     && overview8.honesty.some((s) => /human approval/.test(s) && /not.*approved in this session/.test(s))
     && overview8.honesty.some((s) => /localStorage/.test(s) && /board_version increments ONLY/.test(s)),
+    JSON.stringify(overview8.honesty));
+  check('board_overview honesty explicitly excludes the Board from scientific verification and denies verification by approval',
+    overview8.honesty.some((s) => /Experimental appendix/.test(s) && /not part of the Pygmalion meta-analysis/.test(s) && /software verification suite/.test(s))
+    && overview8.honesty.some((s) => /Approval accepts an item onto this local graph/.test(s) && /does not verify/.test(s)),
     JSON.stringify(overview8.honesty));
 
   // ======================================================================= 9

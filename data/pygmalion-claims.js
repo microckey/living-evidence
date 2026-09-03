@@ -11,10 +11,9 @@
 // arguing about the SAME claims, byte-identical rules included — a map whose
 // claims had drifted from the document's would be worse than no map at all.
 //
-// `statement` is the sentence the claim asserts. In the document it is redundant
-// (living-evidence.js's statementOf() reads the prose span, which is the real
-// source of truth there — the reader must see exactly what is being tested);
-// in the atlas there is no prose to read, so this field is what gets displayed.
+// `statement` is the canonical sentence the claim asserts and the signed source
+// of truth. The runtime paints document and atlas text from this value so mutable
+// DOM text cannot silently change what a receipt or export claims to cover.
 
 export const CLAIMS = [
   {
@@ -40,7 +39,7 @@ export const CLAIMS = [
   },
   {
     id: 'c-overall',
-    statement: 'pooled across all studies, the average expectancy effect is small and not statistically significant',
+    statement: 'pooled across all effect-size records, the average expectancy effect is small and not statistically significant',
     rule: 'Supported iff the pooled REML estimate has p ≥ 0.05 AND |SMD| < 0.2. This is a heuristic smallness check (|SMD| < 0.2 is Cohen’s convention, not a domain-defined SESOI), not an equivalence test.',
     test: {
       analysis: 'overall',
@@ -132,8 +131,8 @@ export const CLAIMS = [
   },
   {
     id: 'c-robust',
-    statement: 'no single study drives these conclusions',
-    rule: 'Supported iff leave-one-out re-fits never flip the significance status of the pooled estimate. Checks significance-status stability only.',
+    statement: 'no single effect-size record changes whether the pooled estimate crosses p < 0.05',
+    rule: 'Supported iff leave-one-record-out re-fits never flip the p < 0.05 status of the pooled estimate. This checks one threshold only; it is not leave-one-experiment-out and does not establish stability of magnitude, moderators, heterogeneity, bias, or dependent effects.',
     test: {
       analysis: 'loo',
       args: {},

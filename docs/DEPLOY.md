@@ -1,30 +1,29 @@
-# Deploying (static folder, no build step)
+# Deploying Living Evidence
 
-The whole site is this folder. Any static host works; sponsors give bonus
-credits for Cloudflare / Netlify / Vercel / Render.
-
-## Cloudflare Pages (recommended — sponsor + fast)
-
-```bash
-npx wrangler pages deploy . --project-name living-evidence
-```
-
-(First run: `npx wrangler login`. Or connect the GitHub repo in the Cloudflare
-dashboard — every push then deploys.)
-
-## Netlify
+The primary deployment uses OpenAI Sites and the project id in
+`.openai/hosting.json`. Build and verify the exact source commit before updating
+the existing site.
 
 ```bash
-npx netlify deploy --dir . --prod
+pnpm test
+pnpm e2e
+pnpm e2e:workspace
+pnpm e2e:atlas
+pnpm e2e:board
+pnpm build
 ```
 
-## Checks after deploy
+Post-deploy checks:
 
-1. `https://…/index.html` renders; dark mode OK.
-2. DevTools console: no errors; `window.LivingEvidence.tools.length === 12`.
-3. ChatGPT desktop app → built-in browser → open the URL → address bar
-   "Site tools" shows the 12 tools → ask the agent to cross-examine.
-4. HTTPS is mandatory (`document.modelContext` is SecureContext-only) — all the
-   hosts above give it by default.
+1. `/` renders 19 effect-size records / 18 experiments and exposes 15 tools.
+2. `/workspace.html` exposes 18 tools and imports remain behind human review.
+3. `/atlas.html` exposes 10 tools; `/board.html` exposes 11 and labels itself an
+   experimental unverified appendix.
+4. The benchmark begins with “No runs recorded” and makes no performance claim.
+5. `get_data_manifest` reports primary checks 0/19, derivation checks 0/19 and
+   structured RoB supplied 0/19.
+6. Create a receipt, export a document, and verify the exact HTML plus detached
+   receipt with `scripts/verify-receipt.mjs`.
 
-Nothing to configure: no env vars, no functions, no headers required.
+The GitHub Pages mirror remains a useful public fallback. HTTPS is required for
+native WebMCP discovery; the manual Tool console is the transparent fallback.

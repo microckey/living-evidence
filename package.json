@@ -1,7 +1,7 @@
 {
   "name": "living-evidence",
-  "version": "0.1.0",
-  "description": "A document format your AI can cross-examine — WebMCP-native living meta-analyses",
+  "version": "0.2.0",
+  "description": "A WebMCP-native aggregate-SMD living evidence prototype with provenance manifests and self-signed integrity receipts",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -11,12 +11,15 @@
     "dev": "node scripts/sync-static.mjs && vinext dev",
     "build": "node scripts/sync-static.mjs && vinext build",
     "start": "wrangler dev --config dist/server/wrangler.json",
-    "test": "node verify/stats.test.mjs && node verify/rules.test.mjs",
+    "test": "node verify/stats.test.mjs && node verify/rules.test.mjs && node verify/integrity.test.mjs && node verify/import.test.mjs && node verify/comparison-eval.test.mjs",
     "serve": "python3 -m http.server 8501 --bind 127.0.0.1",
     "e2e": "node verify/e2e.mjs",
     "e2e:workspace": "node verify/workspace.e2e.mjs",
     "e2e:atlas": "node verify/atlas.e2e.mjs",
-    "e2e:board": "node verify/board.e2e.mjs"
+    "e2e:board": "node verify/board.e2e.mjs",
+    "convert:evidence": "node scripts/convert-evidence.mjs",
+    "verify:receipt": "node scripts/verify-receipt.mjs",
+    "build:benchmark-pdf": "python3 scripts/build-benchmark-pdf.py"
   },
   "dependencies": {
     "react": "19.2.6",

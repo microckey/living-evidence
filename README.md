@@ -2,170 +2,124 @@
 
 **Documents your AI can cross-examine.**
 
-Living Evidence is a web-native document format for the age of machine readers:
-the page carries its **prose for humans**, its **data and analysis code**, and a
-**[WebMCP](https://webmachinelearning.github.io/webmcp/) tool contract** that lets
-the reader's own AI agent rerun, stress-test, and extend every analysis — with
-every result rendered back into the page the human is reading.
+Living Evidence is a WebMCP-native scientific document prototype. The same page
+contains prose for humans, aggregate effect-size records, deterministic analysis
+code, registered claim rules, and typed tools for a reader's agent. Tool-driven
+analyses render back into the page and scientific actions enter a visible audit
+ledger.
 
-The exemplar document is a **living meta-analysis of the Pygmalion effect**
-(*Do teacher expectations raise students' IQ?* — 19 classic experiments,
-Raudenbush 1984): [`index.html`](index.html).
+- Sites deployment: <https://living-evidence.doralemon.chatgpt.site/>
+- Public mirror: <https://microckey.github.io/living-evidence/>
+- Source: <https://github.com/microckey/living-evidence>
 
-## The problem
+## What ships in v0.2
 
-When an AI reads a paper or a data report today, it scrapes prose and then
-*guesses at the arithmetic*. Executable-paper projects (Jupyter, Distill, eLife
-ERA, Quarto) attacked reproducibility **for human hands** — sliders and Run
-buttons, bounded by whatever UI the author scripted. The machine reader got
-nothing: there has been no standard way for a visiting agent to *operate* a
-document.
+| Surface | Purpose | WebMCP tools |
+|---|---|---:|
+| `index.html` | Pygmalion meta-analysis exemplar | 15 |
+| `workspace.html` | Import, human review, analysis and self-contained export | 18 |
+| `atlas.html` | Read-only map of the exemplar and its coverage gaps | 10 |
+| `board.html` | Experimental, unverified conversation-ingestion appendix | 11 |
 
-WebMCP changes that. A page can now hand typed tools to whatever agent the reader
-brings. Living Evidence uses this to make documents that can be **interrogated
-instead of trusted**:
+The exemplar reproduces the historical row-wise analysis of **19 effect-size
+records representing 18 experiments**. Two Pellegrini & Hicks condition records
+share one experiment id; their within-experiment covariance is not modeled, so
+inferential uncertainty may be understated. New imports are restricted to one
+independent SMD record per experiment rather than silently repeating that
+limitation.
 
-- Ask your agent *“does the publication-bias claim actually hold?”* — it calls
-  `evaluate_claim`, the deterministic check runs **in the page**, the claim gets a
-  visible ✓/✗/△ badge, and the funnel plot renders into the article.
-- Ask *“what happens without the two weakest studies?”* — the agent composes
-  `run_meta_analysis {exclude: […]}`, an analysis the author never scripted a
-  button for.
-- Tell it about a **new replication published after this document** — the agent
-  files `propose_study`, and nothing enters the evidence base until the human
-  clicks **Approve** on the card the page renders.
+Key capabilities:
 
-Three design rules make this trustworthy rather than merely automated:
+- Registered claim rules report `passed`, `failed`, `inconclusive`, or
+  `not_run`. These are outputs of author-defined rules—not scientific truth,
+  validity, risk of bias, or evidence quality.
+- Every record can carry DOI/URL, source locator, quote, derivation, design,
+  outcome, timepoint, experiment id, estimand, import hashes, and structured
+  risk-of-bias details. Missingness is explicit.
+- CSV, strict JSON, Quarto and Jupyter packages are parsed locally without
+  executing cells or following URLs. The whole package validates atomically;
+  every record still requires a separate human approval.
+- The main document and workspace use a reload-persistent SHA-256 audit chain.
+  Bounded scientific result preimages are stored so their digests can be
+  recomputed. Human approval accepts a supplied extraction; it does not verify
+  the paper or assessment.
+- ECDSA P-256 receipts sign a scientific-state hash and a covered audit prefix.
+  Export returns a detached receipt for the exact HTML bytes and embeds a
+  separately signed state receipt. The external verifier checks exact bytes,
+  embedded science, runtime components, both signatures, and their linkage.
+  Keys are non-extractable, self-generated per page load, and rotate on reload;
+  pin a fingerprint elsewhere before treating a signature as authorship.
+- A frozen PDF-vs-WebMCP benchmark and local scorer are included. **No runs are
+  recorded, so this project makes no superiority claim.**
 
-1. **The page computes, the agent judges.** Every derived statistic or
-   diagnostic comes from deterministic page code (the meta-analysis engine is
-   validated against R's `metafor`) — never from LLM arithmetic. Input
-   evidence keeps its provenance and verification label.
-2. **Nothing invisible.** Every analysis, verdict and mutation lands in a
-   visible, session-local audit ledger (pure reads stay tool responses);
-   analyses render figures into the page itself.
-3. **Humans own the evidence base.** Agents propose; humans approve.
+## Scientific status
+
+The included corpus is intentionally honest about its gaps:
+
+- primary reports checked: **0/19**;
+- effect-size derivations independently checked: **0/19**;
+- structured risk-of-bias assessments supplied: **0/19**;
+- benchmark comparisons completed: **0**;
+- independent corpora demonstrating generalization: **0**.
+
+Selected numerical outputs reproduce the checked R `metafor` fixture to the
+tested precision. That is software verification of a narrow calculation—not
+validation of the transcription, model assumptions, causal interpretation, or
+scientific conclusion.
 
 ## Try it
 
-**With an agent (the real thing)**
+Open the exemplar with a WebMCP-capable browser and ask:
 
-- **ChatGPT desktop app** — open the live document in the built-in browser
-  (WebMCP tools are discovered automatically; see “Site tools” in the address
-  bar), then ask: *“Cross-examine this document’s claims.”*
-- **Chrome with WebMCP** — see Chrome’s
-  [WebMCP docs](https://developer.chrome.com/docs/ai/webmcp) for current
-  availability (origin trial / flags).
+> Cross-examine this document's claims. Begin with `get_document_overview`,
+> inspect the manifest, then run the registered rules and explain their scope.
 
-**Without an agent** — everything an agent could do is human-operable from the
-document’s **Tool console** (same tools, same schemas, same ledger). Open the
-page, expand “Tool console”, run `evaluate_claim` on `c-bias`.
+Without an agent, use the page's Tool console. To author a document, open the
+workspace and follow `docs/IMPORTING.md`; export is blocked while any proposal
+still awaits human review.
 
-**Build your own** — open `workspace.html`: an empty document of the same
-format. Your agent proposes studies (source + verbatim quote required), you
-approve them, claims get declarative machine checks, and `export_document`
-compiles the whole thing into one self-contained HTML file — a living document
-anyone else can cross-examine, no server required.
-
-**Explore the map** — open `atlas.html`: the same literature as a live
-evidence map. Ask your agent *"what's missing here?"* — it calls `get_gaps`,
-and the answer (none of these nineteen records falls in the 8–16-week band,
-computed from the data on the spot) lights up on the map you're looking at.
-The collection frame is honestly marked unknown/not-searched — a coverage
-lead, not proof that no such study exists — and the study brief names the
-design inputs a follow-up experiment would need, computing no sample size
-from inputs that don't exist.
-
-**Board a research conversation** — open `board.html`: a messy, real ChatGPT
-research thread (a conversation-reported figure putting Tokyo's rate of
-non-working wives among school-age families at Japan's highest) restructured
-into two hypotheses, four mechanisms, eight claims, twenty-three evidence
-extracts and three questions that conversation left open. Every extract
-carries a verbatim conversation excerpt, its cited-source label, and an
-explicit *"not independently verified"* mark. The board's diagnostics
-describe the graph — which claims carry mixed edges, which have no evidence,
-which share a single citation label — bookkeeping over active edges, never
-truth adjudication. Agents extend it through the same propose→approve gate
-the exemplar and workspace use.
-
-**Locally**
+## Verify locally
 
 ```bash
-python3 -m http.server 8501 --bind 127.0.0.1   # from the repo root
-# then open http://127.0.0.1:8501/
+pnpm test
+pnpm e2e
+pnpm e2e:workspace
+pnpm e2e:atlas
+pnpm e2e:board
+pnpm build
 ```
 
-## What’s in the box
-
-| Path | What it is |
-|---|---|
-| `index.html` | The exemplar living meta-analysis (Pygmalion effect, 19 studies) |
-| `workspace.html` | The workspace: build your own evidence base with your agent (propose → approve → synthesize), then export it as a self-contained living document |
-| `atlas.html` | The mini-Atlas: the exemplar's literature as a live, read-only evidence map — cell, claims, records, and computed gaps (including the 8–16-week band none of its nineteen records samples) |
-| `board.html` | The Evidence Board: a real ChatGPT research conversation restructured into hypotheses, claims, quote-carrying evidence extracts and open questions — one visual board with graph diagnostics, beyond the meta-analysis genre |
-| `lib/living-evidence.js` | Format runtime: WebMCP registration, 12-tool document / 15-tool workspace contract, structured audit ledger, claim badges, approval queue, persistence, single-file export, tool console |
-| `lib/meta-stats.js` | Dependency-free meta-analysis engine: REML/DL random effects, fixed effects, subgroups, meta-regression, leave-one-out, Egger’s test, cumulative MA |
-| `lib/meta-plots.js` | Theme-aware SVG forest / funnel / sensitivity / bubble plots |
-| `lib/living-evidence.css` | Component styles (light/dark) |
-| `data/raudenbush1985.js` | Study-level data, transcribed from the open [metadat](https://wviechtb.github.io/metadat/reference/dat.raudenbush1985.html) distribution |
-| `template.html` | Minimal authoring skeleton with synthetic demo data |
-| `docs/SPEC.md` | Format specification v0.1 |
-| `verify/` | Test suites (see below) |
-
-## Validation
-
-- **Statistical goldens** (`verify/stats.test.mjs`): the engine reproduces the
-  published `metafor` reference output for this dataset to published precision —
-  pooled REML SMD 0.0837 (SE 0.0516), 95% CI [−0.0175, 0.1849], τ² 0.0188,
-  I² 41.86%, Q(18) 35.83; moderator model intercept 0.407, slope −0.157, R² 100%.
-- **Real-browser E2E** (`verify/e2e.mjs`, Playwright): drives the public tool
-  contract end-to-end — all 12 tools, claim verdicts of all three kinds,
-  proposal validation/duplicate rejection, the human approval flow (k 19→20,
-  stale-badge invalidation), ledger integrity, zero page errors.
+Verify an exported document and detached receipt:
 
 ```bash
-node verify/stats.test.mjs
-node verify/e2e.mjs
+node scripts/verify-receipt.mjs export.html.receipt.json export.html
 ```
 
-## Publishing your own
+Use `--signature-only` only when deliberately performing a partial check without
+the artifact. The verifier rejects duplicate JSON keys, unknown receipt fields,
+non-canonical Base64url signatures, private JWK material, and missing artifact
+bytes for an artifact receipt.
 
-A Living Evidence document is **static hosting only** — no backend, no accounts,
-no platform. Copy `template.html` + `lib/`, embed your study table, mark your
-claims, deploy the folder anywhere HTML can be served. See
-[`docs/SPEC.md`](docs/SPEC.md).
+## Format files
 
-## The bigger picture
+- `lib/living-evidence.js` — document/workspace runtime and WebMCP contract
+- `lib/evidence-package.js` — strict local interchange parser
+- `lib/integrity.js` — canonical JSON, SHA-256 and receipt validation
+- `schemas/evidence-package-v1.schema.json` — producer schema
+- `docs/SPEC.md` — v0.2 contract and trust boundaries
+- `docs/BENCHMARK.md` / `docs/benchmark-baseline.pdf` — comparison protocol
+- `template.html` — minimal synthetic authoring skeleton
 
-2010s: paper + PDF. 2020s: paper + executable code and data. 2026+: paper +
-executable code and data + **machine-addressable claims and agent tools**.
+## Vision, without the hype
 
-eLife's Executable Research Articles proved the middle step was publishable — and
-showed why it stayed niche: supply without demand. Authoring cost was real, and
-human readers rarely rerun anything. Machine readers rerun constantly.
-**For an agent, reading is rerunning** — agents are the demand side executable
-publishing has been waiting for.
+The hypothesis is that machine-addressable claims and deterministic reruns can
+reduce friction in scientific checking. This prototype demonstrates that loop in
+one aggregate-SMD document; it does not yet demonstrate faster or more accurate
+science. A bad design can rerun faithfully, a wrong model can rerun precisely,
+and fabricated data can hash cleanly. The next credible milestone is measured
+performance across independently authored corpora with primary-source checks,
+instrument-specific risk-of-bias workflows, covariance-aware models, and durable
+externally anchored releases.
 
-Where that points — a **direction this repo is aiming at, not software that
-exists** — is an *executable layer for science*: a minimal common protocol under
-which a Nature paper, a university page and a lone researcher's site all look
-identical to an agent, so a question nobody computed at publication time (*“does
-this effect survive restricting to age ≥ 65?”*) becomes askable retroactively
-across an entire literature. The v0.2 verb sketch:
-
-`list_claims() · inspect_claim() · get_evidence() · get_analysis_spec() · rerun_claim() · get_effect_estimate() · get_data_manifest() · get_reproducibility_status()`
-
-None of that is shipped. What ships here is v0.1 — the smallest complete loop of
-that idea, hand-built for one document genre. And the ceiling is worth stating
-plainly: this is **auditability infrastructure, not a truth machine**. WebMCP does
-not improve experimental design — a bad design reruns faithfully, a wrong model
-reruns precisely wrong. It collapses the cost of verification, comparison and
-re-analysis; science gets faster as a consequence of cheap auditing, not because
-machines find truth. Full direction: the v0.2 section of
-[`docs/SPEC.md`](docs/SPEC.md).
-
-## License & data
-
-Code: MIT. Exemplar prose: CC BY 4.0. Study-level data are published statistics
-from Raudenbush (1984) / Raudenbush & Bryk (1985), transcribed via the open
-metadat distribution; original works © their authors.
+Code is MIT. Exemplar prose is CC BY 4.0. Source statistics remain © their
+original authors.

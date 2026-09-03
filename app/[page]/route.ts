@@ -16,7 +16,7 @@ const pages = {
     source: boardHtml,
     title: 'Living Evidence Board',
     description:
-      'Turn hypotheses, claims, evidence, and open questions into one auditable map for people and AI agents.',
+      'Experimental appendix: inspect an unverified conversation-derived evidence map without treating it as validated scientific evidence.',
   },
   workspace: {
     source: workspaceHtml,
@@ -41,7 +41,7 @@ export async function GET(
     return renderDocument(request, indexHtml, {
       title: 'Living Evidence — Documents your AI can cross-examine',
       description:
-        'A WebMCP-native living meta-analysis that you and your AI agent can cross-examine, re-run, and extend on the page.',
+        'A WebMCP-native aggregate-SMD prototype with registered-rule outcomes, explicit provenance gaps, reruns, and human-gated updates.',
     });
   }
   const pageName = requestedPage.replace(/\.html$/, '');

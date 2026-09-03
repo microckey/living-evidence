@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Living Evidence Atlas — mini</title>
-<meta name="description" content="A read-only evidence map over one estimand cell: 19 Pygmalion records, 6 machine-checkable claims, and three gaps computed live from the data — explorable by you and by your AI agent on the same page.">
+<meta name="description" content="A read-only evidence map over one estimand cell: 18 Pygmalion experiments represented by 19 effect-size records, six machine-checkable claims, and three gaps computed live from the data.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>">
 <link rel="stylesheet" href="lib/living-evidence.css">
 <style>
@@ -44,7 +44,7 @@
 <main>
   <header class="doc">
     <h1>Living Evidence Atlas — mini</h1>
-    <p class="subtitle">One estimand cell, nineteen records, six machine-checkable claims and three gaps the page
+    <p class="subtitle">One estimand cell, 18 experiments represented by 19 effect-size records, six machine-checkable claims and three gaps the page
     computes about itself — as a map you and your agent explore together.</p>
     <div class="le-status" id="atlas-status"><span class="le-status-dot le-off"></span><span>Initializing agent interface…</span></div>
   </header>
@@ -54,7 +54,7 @@
     literature. An <em>Atlas</em> is the index above many such documents: it holds the derived layer — the graph of
     cells, claims, records and edges, the syntheses, and the <em>gaps</em> that fall out of them. This page is that
     direction rendered at demo scale, over the one literature this project ships: teacher expectancy and pupil IQ.</p>
-    <p>Everything on the map is computed in your browser from the same 19 records the document carries, and the six
+    <p>Everything on the map is computed in your browser from the same 19 effect-size records from 18 experiments the document carries, and the six
     claims are imported from the same module the document boots from — the map’s rules cannot drift from the
     document’s (one shared module), and the test suite holds the displayed sentences to the same text.
     Design rationale and the full ontology: <a href="docs/DESIGN.md">DESIGN.md</a> (§7 for the layer this belongs to).
@@ -69,12 +69,14 @@
     persistence and no backend. The <code>weeks</code> moderator is labelled <em>candidate</em> because it is a
     study-level, observational comparison across randomized experiments, not a randomized contrast. Gaps are computed
     from <em>this</em> collection frame: “unknown / not-searched” is a different state from “measured and absent”.</p>
+    <p class="refs">The Pellegrini &amp; Hicks (1972) experiment contributes separate aware- and blind-tester records.
+    The reference fit reproduces the historical 19-row analysis and does not model their within-experiment covariance.</p>
   </div>
 
   <div class="howto">
     <div>
       <h3>If you are a human</h3>
-      <p>Click any node — the estimand cell in the middle, a claim, one of the nineteen record dots, or a dashed gap
+      <p>Click any node — the estimand cell in the middle, a claim, one of the 19 effect-size record dots, or a dashed gap
       card on the right. Its detail opens in the panel. Every node is keyboard-reachable: tab to it and press Enter.
       You can run the agent’s tools yourself from the <a href="#console">Tool console</a>.</p>
     </div>
@@ -91,7 +93,7 @@
   <div class="maprow">
     <div class="atlas-frame" id="atlas-map"></div>
     <p class="caption">One estimand cell (centre), the two constructs it relates, the document that asserts claims
-    about it, the six claims (upper arc), the nineteen evidence records (lower fan — dot size grows with precision
+    about it, the six claims (upper arc), the 19 evidence records from 18 experiments (lower fan — dot size grows with precision
     (1/v<sub>i</sub>), floored for legibility; colour by weeks of prior teacher–pupil contact, ordered left to right
     by that same field), the candidate moderator, and three computed gaps (dashed, right).</p>
   </div>
@@ -117,8 +119,8 @@
 
   <h2>Notes on what is computed and what is not</h2>
   <p class="refs">The synthesis is a random-effects model (REML by default; DerSimonian–Laird and fixed-effect through
-  <code>synthesize</code>), validated against R <code>metafor</code> for this dataset — all published reference values
-  (the REML fit and the capped-weeks meta-regression) reproduced to published precision. The coverage gap is the
+  <code>synthesize</code>). For this fixture, selected numerical outputs reproduce R <code>metafor</code> reference values
+  (the REML fit and the capped-weeks meta-regression) to the tested precision. The coverage gap is the
   largest interior gap between observed values of prior contact, and the zero-crossing quoted on its card comes from a
   live meta-regression fit on min(weeks, 3): neither that band nor that crossing point is typed in — change the records
   and both move. Two things on this page <em>are</em> authored rather than computed, and are labelled as such: the
@@ -130,12 +132,12 @@
   experiments and can be confounded by other study features.</p>
 
   <footer>
-    <p><strong>Living Evidence v0.1 — Atlas mini.</strong> Read-only evidence map over one estimand cell. Source, format
+    <p><strong>Living Evidence v0.2 — Atlas mini.</strong> Read-only evidence map over one estimand cell. Source, format
     spec and design document: <a href="https://github.com/microckey/living-evidence">github.com/microckey/living-evidence</a>
     (MIT). Study-level data from the open metadat distribution of <code>dat.raudenbush1985</code>, © the original
     authors. The page’s public API is <code>window.LivingEvidenceAtlas</code>.</p>
-    <p>For a mutable evidence graph beyond this one estimand cell, see the <a href="board.html">Evidence Board</a> —
-    hypotheses, mechanisms, claims, evidence and open questions, grown by propose→approve instead of fixed at boot.</p>
+    <p><strong>Experimental appendix:</strong> the <a href="board.html">Evidence Board</a> is an unverified
+    conversation-to-graph sandbox; it is not part of this exemplar, its evidence base, or its numerical/software verification.</p>
     <p><noscript>This page requires JavaScript: the map, its statistics and its gaps are computed, not drawn in advance.</noscript></p>
   </footer>
 </main>

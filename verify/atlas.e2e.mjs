@@ -75,14 +75,11 @@ try {
       JSON.stringify(docClaims.map((c) => c.id)) === JSON.stringify(CLAIMS.map((c) => c.id)),
       JSON.stringify(docClaims.map((c) => c.id)));
     const domStatements = Object.fromEntries(docClaims.map((c) => [c.id, c.statement]));
-    check('document statements come from the DOM span, normalising to the module text',
-      CLAIMS.every((c) => domStatements[c.id].replace(/\s+/g, ' ') === c.statement),
+    check('document statements come from canonical claim data',
+      CLAIMS.every((c) => domStatements[c.id] === c.statement),
       JSON.stringify(domStatements));
-    // c-textbook's prose span wraps across two source lines, so the DOM text carries
-    // a newline the module's normalised statement does not — proof that statementOf()
-    // read the span and not the config field.
-    check('statementOf() prefers the span (raw DOM text differs from the module field)',
-      domStatements['c-textbook'] !== CLAIMS[0].statement && /\n/.test(domStatements['c-textbook']),
+    check('mutable DOM whitespace does not redefine a signed statement',
+      domStatements['c-textbook'] === CLAIMS[0].statement && !/\n/.test(domStatements['c-textbook']),
       JSON.stringify(domStatements['c-textbook']));
     check('document boots clean after the extraction', docErrors.length === 0, docErrors.join(' | '));
     await docPage.close();
@@ -183,13 +180,26 @@ try {
     await page.textContent('#atlas-map [data-node="gap:replication"]'));
   check('replication gap does not overclaim', /not evidence that no pre-registered replication/.test(replication.honest_framing), replication.honest_framing);
   const verification = gapsRes.gaps.find((g) => g.id === 'gap:verification');
-  check('verification gap is 0 of 19', verification.count_with_manifest === 0 && verification.total_records === 19, JSON.stringify(verification));
-  check('verification gap points at the record ladder', /R2/.test(verification.statement) && /unassigned in v0\.1/.test(verification.honest_framing), verification.statement);
-  check('verification statement names all three missing artefacts and hedges the rung',
-    /per-record source quote, approval event, or data manifest/.test(verification.statement)
-    && /if R2 requires a manifest, no record can currently be certified as R2 or higher/.test(verification.statement),
+  check('verification gap distinguishes secondary locators from four absent verification layers',
+    verification.total_records === 19
+    && verification.count_with_secondary_locator === 19
+    && verification.count_with_primary_source_check === 0
+    && verification.count_with_effect_size_derivation_check === 0
+    && verification.count_with_manifest === 0
+    && verification.count_with_risk_of_bias_assessment === 0,
+    JSON.stringify(verification));
+  check('verification statement reports primary, derivation, manifest and RoB counts without treating a secondary locator as verification',
+    /All 19 records have secondary/.test(verification.statement)
+    && /0\/19 have primary-source checks/.test(verification.statement)
+    && /0\/19 have independent effect-size derivation checks/.test(verification.statement)
+    && /0\/19 have per-record data manifests/.test(verification.statement)
+    && /0\/19 have structured risk-of-bias assessments/.test(verification.statement),
     verification.statement);
-  check('the card defines R2 in one clause', /R2 = recomputable from an attached data manifest/.test(verification.honest_framing), verification.honest_framing);
+  check('verification framing says recomputability is not primary-source, derivation, validity, RoB or authenticity verification',
+    /pooled synthesis is recomputable/.test(verification.honest_framing)
+    && /does not verify primary extraction, effect derivation, design validity, risk of bias, or data authenticity/.test(verification.honest_framing)
+    && /Secondary row locators are a starting point, not primary-source traceability/.test(verification.honest_framing),
+    verification.honest_framing);
   check('get_gaps says the numbers depend on authored definitions, not just the data',
     /computed from the current records under authored gap definitions and model specifications/.test(gapsRes.note), gapsRes.note);
   check('the map shows the computed band, not a literal', /8–16 weeks/.test(await page.textContent('#atlas-map [data-node="gap:coverage-weeks"]')));
@@ -200,6 +210,9 @@ try {
   const syn = await call('synthesize', {});
   const nodeFull = metaAnalyze(DATASET.studies, { method: 'REML' });
   check('synthesize k = 19', syn.k === 19, String(syn.k));
+  check('synthesize names k as effect-size records and reports 18 represented experiments',
+    syn.k_unit === 'effect_size_records' && syn.experiment_count_represented === 18,
+    JSON.stringify({ k_unit: syn.k_unit, experiment_count_represented: syn.experiment_count_represented }));
   check('synthesize estimate matches node metaAnalyze REML', near(syn.estimate, nodeFull.estimate, 1e-9), `${syn.estimate} vs ${nodeFull.estimate}`);
   check('synthesize CI matches node metaAnalyze REML',
     near(syn.ci[0], nodeFull.ci_lower, 1e-9) && near(syn.ci[1], nodeFull.ci_upper, 1e-9), JSON.stringify(syn.ci));
@@ -208,6 +221,9 @@ try {
   const synEx = await call('synthesize', { exclude: ['s04'] });
   const nodeEx = metaAnalyze(DATASET.studies.filter((s) => s.id !== 's04'), { method: 'REML' });
   check('exclusion drops k to 18', synEx.k === 18, String(synEx.k));
+  check('excluding one of the two Pellegrini/Hicks records still represents all 18 experiments',
+    synEx.k_unit === 'effect_size_records' && synEx.experiment_count_represented === 18,
+    JSON.stringify({ k_unit: synEx.k_unit, experiment_count_represented: synEx.experiment_count_represented }));
   check('excluded fit matches the node 18-record re-fit',
     near(synEx.estimate, nodeEx.estimate, 1e-9) && near(synEx.ci[0], nodeEx.ci_lower, 1e-9) && near(synEx.ci[1], nodeEx.ci_upper, 1e-9) && near(synEx.tau2, nodeEx.tau2, 1e-9),
     `${synEx.estimate}/${synEx.tau2} vs ${nodeEx.estimate}/${nodeEx.tau2}`);
@@ -216,14 +232,14 @@ try {
   const shown = (x) => x.toFixed(3).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
   const cellAfterExclusion = await cellText();
   check('the cell node shows the excluded re-fit',
-    cellAfterExclusion.includes(shown(synEx.estimate)) && /k = 18 \(−1\)/.test(cellAfterExclusion),
+    cellAfterExclusion.includes(shown(synEx.estimate)) && /18 effect-size records \(−1\)/.test(cellAfterExclusion),
     cellAfterExclusion);
   // The aria-label is the same fact for a screen reader; it must track the re-fit,
   // and it must carry the k and the exclusion — a pooled number without its record
   // count is not the same claim.
   const cellAria = await page.getAttribute('[data-node="cell:teacher-expectancy-iq"]', 'aria-label');
-  check('the cell aria-label tracks the excluded re-fit (estimate, k 18, the exclusion)',
-    cellAria.includes(shown(synEx.estimate)) && /k 18/.test(cellAria) && /excluding s04/.test(cellAria),
+  check('the cell aria-label tracks the excluded re-fit (estimate, 18 records, the exclusion)',
+    cellAria.includes(shown(synEx.estimate)) && /18 effect-size records/.test(cellAria) && /excluding s04/.test(cellAria),
     cellAria);
   const emptyFit = await callErr('synthesize', { exclude: DATASET.studies.slice(0, 18).map((s) => s.id) });
   check('excluding below k=2 errors instead of fitting nothing', /fewer than 2/.test(emptyFit || ''), emptyFit);
@@ -241,42 +257,49 @@ try {
   await call('synthesize', {}); // back to the canonical full-sample REML fit
   const cellRestored = await cellText();
   check('…and returns to the full-sample fit when re-synthesized',
-    cellRestored.includes(shown(nodeFull.estimate)) && /k = 19/.test(cellRestored), cellRestored);
+    cellRestored.includes(shown(nodeFull.estimate)) && /19 effect-size records/.test(cellRestored), cellRestored);
 
   // ======================================================================= 4
-  console.log('\n# 4. claims: exemplar verdicts, on the map');
-  const EXPECTED_VERDICTS = {
-    'c-textbook': 'challenged', 'c-overall': 'supported', 'c-moderator': 'supported',
-    'c-window': 'supported', 'c-robust': 'supported', 'c-bias': 'nuanced',
+  console.log('\n# 4. claims: registered-rule outcomes, on the map');
+  const EXPECTED_OUTCOMES = {
+    'c-textbook': 'failed', 'c-overall': 'passed', 'c-moderator': 'passed',
+    'c-window': 'passed', 'c-robust': 'passed', 'c-bias': 'inconclusive',
   };
   const listed = await call('list_claims', {});
-  check('list_claims returns 6 claims, all untested at boot',
-    listed.claims.length === 6 && listed.claims.every((c) => c.status === 'untested'),
-    JSON.stringify(listed.claims.map((c) => c.status)));
+  check('list_claims returns 6 claims, all canonically not_run at boot',
+    listed.claims.length === 6
+    && listed.claims.every((c) => c.outcome_type === 'document_registered_rule' && c.rule_outcome === 'not_run'),
+    JSON.stringify(listed.claims.map((c) => [c.outcome_type, c.rule_outcome])));
   check('every claim ships its machine-check AST',
     listed.claims.every((c) => c.machine_check && Array.isArray(c.machine_check.verdicts) && c.machine_check.verdicts.at(-1).default === true));
   check('claims carry the statement from the module (no prose to scrape here)',
     listed.claims.every((c, i) => c.statement === CLAIMS[i].statement), JSON.stringify(listed.claims.map((c) => c.statement.slice(0, 20))));
-  check('list_claims states what a verdict is scoped to',
-    listed.verdict_scope === 'authored statistical rule only — not an independent judgment of truth, validity, or bias', String(listed.verdict_scope));
-  for (const [id, want] of Object.entries(EXPECTED_VERDICTS)) {
+  const RULE_SCOPE = 'document-registered rule outcome only — not an independent judgment of truth, validity, risk of bias, or evidence quality';
+  check('list_claims states exactly what a registered-rule outcome is scoped to',
+    listed.rule_outcome_scope === RULE_SCOPE && listed.verdict_scope === RULE_SCOPE,
+    JSON.stringify({ rule_outcome_scope: listed.rule_outcome_scope, verdict_scope: listed.verdict_scope }));
+  const LEGACY_FOR = { failed: 'challenged', passed: 'supported', inconclusive: 'nuanced' };
+  for (const [id, want] of Object.entries(EXPECTED_OUTCOMES)) {
     const r = await call('evaluate_claim', { claim_id: id });
-    check(`claim ${id} ${want}`, r.verdict === want, `${r.verdict} — ${r.reason}`);
+    check(`claim ${id} registered rule ${want}`,
+      r.outcome_type === 'document_registered_rule' && r.rule_outcome === want
+      && r.rule_outcome_scope === RULE_SCOPE && r.verdict === LEGACY_FOR[want],
+      JSON.stringify({ outcome_type: r.outcome_type, rule_outcome: r.rule_outcome, legacy_verdict: r.verdict, reason: r.reason }));
   }
   const glyphs = await page.evaluate(() => [...document.querySelectorAll('.atlas-claim-badge')].map((e) => e.textContent).filter(Boolean));
   check('6 verdict glyphs painted on the map', glyphs.length === 6 && glyphs.every((g) => '✓✗△'.includes(g)), glyphs.join(''));
   // Counting glyphs is not checking them: a swapped glyph map still paints 6 valid
-  // symbols and still yields 4/1/1. Pair each claim's badge with its own verdict.
-  const GLYPH_FOR = { supported: '✓', challenged: '✗', nuanced: '△' };
-  for (const [id, want] of Object.entries(EXPECTED_VERDICTS)) {
+  // symbols and still yields 4/1/1. Pair each claim's badge with its own rule outcome.
+  const GLYPH_FOR = { passed: '✓', failed: '✗', inconclusive: '△' };
+  for (const [id, want] of Object.entries(EXPECTED_OUTCOMES)) {
     const badge = await page.textContent(`[data-claim-badge="${id}"]`);
-    check(`claim ${id} wears the ${want} glyph (${GLYPH_FOR[want]})`,
+    check(`claim ${id} wears the registered-rule ${want} glyph (${GLYPH_FOR[want]})`,
       badge === GLYPH_FOR[want], `${id} shows "${badge}", ${want} should show "${GLYPH_FOR[want]}"`);
   }
   // …and the badge is decoration for the eye only: the aria-label has to say it too.
   const textbookAria = await page.getAttribute('[data-node="claim:c-textbook"]', 'aria-label');
-  check('an evaluated claim refreshes its aria-label with the verdict',
-    /challenged/.test(textbookAria || ''), textbookAria);
+  check('an evaluated claim refreshes its aria-label with the canonical rule outcome',
+    /Rule outcome: failed/.test(textbookAria || ''), textbookAria);
   check('glyph colours are carried by verdict classes',
     await page.locator('.atlas-verdict-challenged').count() === 1
     && await page.locator('.atlas-verdict-nuanced').count() === 1
@@ -289,9 +312,12 @@ try {
   // C21: the map calls it claim:c-window, list_claims calls it c-window. Both address it.
   const nodeFormClaim = await call('evaluate_claim', { claim_id: 'claim:c-window' });
   check('evaluate_claim accepts the node form claim:c-window',
-    nodeFormClaim.claim_id === 'c-window' && nodeFormClaim.node_id === 'claim:c-window' && nodeFormClaim.verdict === 'supported',
-    JSON.stringify({ id: nodeFormClaim.claim_id, node: nodeFormClaim.node_id, v: nodeFormClaim.verdict }));
-  check('the verdict response scopes itself', nodeFormClaim.verdict_scope === listed.verdict_scope, String(nodeFormClaim.verdict_scope));
+    nodeFormClaim.claim_id === 'c-window' && nodeFormClaim.node_id === 'claim:c-window'
+    && nodeFormClaim.rule_outcome === 'passed' && nodeFormClaim.verdict === 'supported',
+    JSON.stringify({ id: nodeFormClaim.claim_id, node: nodeFormClaim.node_id, outcome: nodeFormClaim.rule_outcome, legacy: nodeFormClaim.verdict }));
+  check('the registered-rule response scopes itself',
+    nodeFormClaim.rule_outcome_scope === listed.rule_outcome_scope && nodeFormClaim.verdict_scope === listed.verdict_scope,
+    JSON.stringify({ rule_outcome_scope: nodeFormClaim.rule_outcome_scope, verdict_scope: nodeFormClaim.verdict_scope }));
   await call('evaluate_claim', { claim_id: 'c-bias' }); // restore the demo state block 4 left behind
 
   // ======================================================================= 5
@@ -306,7 +332,30 @@ try {
   check('the panel shows Maxwell (1970) values',
     /Maxwell/.test(recPanel) && /1970/.test(recPanel) && /0\.8/.test(recPanel) && /0\.063/.test(recPanel) && /individual/.test(recPanel),
     recPanel.slice(0, 220));
-  check('the record panel is honest about its ladder rung', /unassigned in v0\.1/.test(recPanel));
+  check('the record detail exposes structured provenance and an explicitly unassessed RoB',
+    focus.detail.provenance?.source_type === 'secondary_dataset'
+    && focus.detail.provenance?.source_url === 'https://wviechtb.github.io/metadat/reference/dat.raudenbush1985.html'
+    && /row 10 \(s10\)/.test(focus.detail.provenance?.source_locator || '')
+    && /not independently re-derived/.test(focus.detail.provenance?.derivation || '')
+    && focus.detail.provenance?.synthesis_doi === '10.1037/0022-0663.76.1.85'
+    && focus.detail.provenance?.primary_source_checked === false
+    && focus.detail.provenance?.effect_size_derivation_checked === false
+    && focus.detail.risk_of_bias?.status === 'not_assessed',
+    JSON.stringify({ provenance: focus.detail.provenance, risk_of_bias: focus.detail.risk_of_bias }));
+  check('the record panel renders locator, derivation, primary-source and RoB caveats',
+    /row 10 \(s10\)/.test(recPanel) && /not independently re-derived/.test(recPanel)
+    && /primary source checkedno/.test(recPanel.replace(/\s+/g, ' '))
+    && /not_assessed/.test(recPanel) && /unassigned in v0\.2/.test(recPanel),
+    recPanel.slice(0, 900));
+
+  const pellegriniAware = await call('focus_node', { node_id: 's04' });
+  const pellegriniBlind = await call('focus_node', { node_id: 's05' });
+  check('s04 and s05 are two records from the same disclosed experiment cluster',
+    pellegriniAware.detail.experiment_id === 'pellegrini-hicks-1972'
+    && pellegriniBlind.detail.experiment_id === pellegriniAware.detail.experiment_id
+    && pellegriniAware.detail.record_role !== pellegriniBlind.detail.record_role,
+    JSON.stringify({ s04: [pellegriniAware.detail.experiment_id, pellegriniAware.detail.record_role], s05: [pellegriniBlind.detail.experiment_id, pellegriniBlind.detail.record_role] }));
+  await call('focus_node', { node_id: 'rec:s10' });
   const focusEntry = (await audit()).at(-1);
   check('focus_node is ledgered as navigation', focusEntry.kind === 'navigation' && focusEntry.inputs.node_id === 'rec:s10', JSON.stringify(focusEntry));
   const badNode = await callErr('focus_node', { node_id: 'rec:nope' });
@@ -453,7 +502,8 @@ try {
   check('a console-driven evaluation is attributed to the human',
     consoleEntry.actor === 'human' && consoleEntry.tool === 'evaluate_claim' && consoleEntry.inputs.claim_id === 'c-window',
     JSON.stringify(consoleEntry));
-  check('console output rendered as JSON', /"verdict"/.test(await page.textContent('#atlas-console .le-console-out')));
+  check('console output renders the canonical registered-rule outcome as JSON',
+    /"rule_outcome": "passed"/.test(await page.textContent('#atlas-console .le-console-out')));
   check('human rows are visibly marked in the ledger', await page.locator('#atlas-ledger .le-human').count() >= 1);
   check('agent rows too', await page.locator('#atlas-ledger .le-agent').count() >= 1);
   check('and the boot row is the system', await page.locator('#atlas-ledger .le-system').count() === 1);
@@ -480,17 +530,21 @@ try {
       && /nothing propagates to the exemplar or workspace pages/.test(s))
     && !ov.honesty.some((s) => /READ-ONLY/.test(s)),
     JSON.stringify(ov.honesty));
-  check('overview scopes what a verdict is', ov.verdict_scope === 'authored statistical rule only — not an independent judgment of truth, validity, or bias'
-    && ov.honesty.some((s) => /authored statistical rule only/.test(s)), String(ov.verdict_scope));
+  check('overview scopes registered-rule outcomes away from truth, validity, RoB and evidence quality',
+    ov.rule_outcome_scope === RULE_SCOPE && ov.verdict_scope === RULE_SCOPE
+    && ov.honesty.some((s) => /document-registered rule outcome only/.test(s)),
+    JSON.stringify({ scope: ov.rule_outcome_scope, honesty: ov.honesty }));
   check('overview invites external checks instead of forbidding arithmetic',
     ov.honesty.some((s) => /Use tool results when reporting page state/.test(s) && /label them external/.test(s)
       && /not the data or model assumptions/.test(s))
     && !ov.honesty.some((s) => /Never recompute/.test(s)),
     JSON.stringify(ov.honesty));
-  check('overview places this page in the suite and suggests a flow',
+  check('overview places this page in the suite, demotes Board to an unverified experimental appendix, and suggests a flow',
     ov.suite_context.you_are_here === 'atlas' && /index\.html/.test(ov.suite_context.exemplar) && /workspace\.html/.test(ov.suite_context.workspace)
+    && /experimental appendix/.test(ov.suite_context.board) && /unverified conversation-to-graph sandbox/.test(ov.suite_context.board)
+    && /not part of the exemplar/.test(ov.suite_context.board) && /numerical\/software verification/.test(ov.suite_context.board)
     && Array.isArray(ov.suggested_flow) && ov.suggested_flow.length >= 4 && /list_nodes/.test(ov.suggested_flow.join(' ')),
-    JSON.stringify(ov.suggested_flow));
+    JSON.stringify({ board: ov.suite_context.board, flow: ov.suggested_flow }));
   check('overview states there is no numeric power output', ov.honesty.some((s) => /no numeric power or sample size/.test(s)));
   check('overview states the single-literature demo scale', ov.honesty.some((s) => /Demo scale: ONE literature/.test(s)));
   check('overview flags the candidate moderator', ov.honesty.some((s) => /CANDIDATE/.test(s)));
@@ -501,12 +555,17 @@ try {
     '2–7 weeks': DATASET.studies.filter((s) => s.weeks >= 2 && s.weeks <= 7).length,
     '≥ 17 weeks': DATASET.studies.filter((s) => s.weeks >= 17).length,
   };
-  check('get_cell reports k = 19 and band counts matching the dataset',
-    cell.k === 19 && JSON.stringify(cell.records_by_weeks_band) === JSON.stringify(bandExpect),
+  check('get_cell reports 19 effect-size records / 18 experiments and band counts matching the dataset',
+    cell.k === 19 && cell.record_count === 19 && cell.experiment_count === 18 && cell.analysis_unit === 'effect_size_record'
+    && /19 effect-size records/.test(cell.unit_note) && /18 experiments/.test(cell.unit_note)
+    && /does not model within-experiment covariance/.test(cell.unit_note)
+    && JSON.stringify(cell.records_by_weeks_band) === JSON.stringify(bandExpect),
     `${JSON.stringify(cell.records_by_weeks_band)} vs ${JSON.stringify(bandExpect)}`);
   check('the three bands partition all 19 records', Object.values(bandExpect).reduce((a, b) => a + b, 0) === 19, JSON.stringify(bandExpect));
-  check('get_cell attaches all 6 claims with their verdicts',
-    cell.claims_attached.length === 6 && cell.claims_attached.every((c) => c.verdict !== 'untested'), JSON.stringify(cell.claims_attached));
+  check('get_cell attaches all 6 claims with canonical registered-rule outcomes',
+    cell.claims_attached.length === 6
+    && cell.claims_attached.every((c) => ['passed', 'failed', 'inconclusive'].includes(c.rule_outcome)),
+    JSON.stringify(cell.claims_attached));
   check('get_cell refuses an unknown cell id', /unknown cell id/.test(await callErr('get_cell', { cell_id: 'cell:nope' }) || ''));
   // C27: "causal" is the estimand, and the note says what that rests on.
   check('get_cell keeps relation_type causal and explains what it depends on',

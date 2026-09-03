@@ -11,7 +11,7 @@ const files = [
   'workspace.html',
   'template.html',
 ];
-const directories = ['data', 'docs', 'lib'];
+const directories = ['data', 'docs', 'lib', 'schemas'];
 
 await mkdir(publicRoot, { recursive: true });
 await mkdir(sourceRoot, { recursive: true });

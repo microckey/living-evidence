@@ -73,7 +73,8 @@
       <p>You are the approval gate and the editor. Nothing an agent proposes enters the evidence base until you press
       <em>Approve</em>. Curate the claims, watch the ledger, and when the document is worth keeping, export it —
       one self-contained file, no server, no dependencies.</p>
-      <p class="refs">This workspace saves itself in this browser only. It never leaves your machine.</p>
+      <p class="refs">This workspace saves itself on this device. Export creates a portable document with a
+      content-addressed scientific-state id and self-signed release receipt.</p>
     </div>
     <div>
       <h3>Your agent</h3>
@@ -87,27 +88,39 @@
     </div>
   </div>
 
+  <h2>Import an evidence package</h2>
+  <div class="le-import">
+    <strong>CSV, JSON, Quarto or Jupyter → review cards</strong>
+    <p class="refs">Files are parsed locally and never uploaded or executed. CSV requires the complete
+    <code>living-evidence-smd-package/1</code> traceability contract: record/experiment ids, yi/vi, source, quote,
+    locator, derivation, design, outcome, timepoint, SMD definition/direction, collection frame and explicit RoB
+    status. See the linked schema/producer guide for the exact header. Import validates the whole file first, then
+    stages every row for separate human approval; approval accepts a supplied extraction, not its scientific truth.</p>
+    <input id="le-import-file" type="file" accept=".csv,.json,.qmd,.ipynb,text/csv,application/json">
+    <p class="le-import-status" id="le-import-status">No package selected. Maximum 1 MiB / 100 records. See <a href="docs/IMPORTING.md">producer recipes</a>.</p>
+  </div>
+
   <h2>Evidence base</h2>
-  <p class="stat-line">Currently <strong data-le-bind="k">0</strong> approved studies; pooled random-effects (REML)
+  <p class="stat-line">Currently <strong data-le-bind="k">0</strong> approved effect-size records; pooled random-effects (REML)
   estimate <strong data-le-bind="estimate">—</strong>, 95%&nbsp;CI <strong data-le-bind="ci">—</strong>,
   <em>p</em>&nbsp;= <strong data-le-bind="p">—</strong> (I²&nbsp;= <span data-le-bind="I2">—</span>,
   Q&nbsp;= <span data-le-bind="Q">—</span>, <em>p</em>&nbsp;= <span data-le-bind="Q_p">—</span>).</p>
 
   <figure class="main">
     <div id="le-main-figure"></div>
-    <figcaption class="refs">The forest plot appears as soon as two studies have been approved, and re-renders on every
+    <figcaption class="refs">The forest plot appears as soon as two effect-size records have been approved, and re-renders on every
     change to the evidence base.</figcaption>
   </figure>
 
   <section id="pending-section">
-    <h2>Proposed studies awaiting your approval</h2>
+    <h2>Proposed evidence records awaiting your approval</h2>
     <p class="refs">An agent proposed these. They are not in any analysis yet.</p>
     <div id="le-pending"></div>
   </section>
 
   <h2>Claims</h2>
-  <p class="refs">Claims added with <code>add_claim</code>. Each carries a deterministic machine check expressed as
-  data (no code, no eval), so the rule an agent reads is the rule the page runs. Verdict badges appear here.</p>
+  <p class="refs">Claims added with <code>add_claim</code>. Each carries a document-registered rule expressed as data
+  (no code, no eval). Badges report only whether that rule passed, failed, or was inconclusive — not truth or evidence quality.</p>
   <ul class="le-claims" id="le-claims-list"></ul>
 
   <h2 id="workbench">Reader’s Workbench</h2>
@@ -118,9 +131,15 @@
   </section>
 
   <h2 id="ledger">Audit ledger</h2>
-  <p class="refs">Append-only record of everything done in this workspace — by agents, by you, and by the page itself.
-  It is saved with the workspace and travels nowhere else.</p>
+  <p class="refs">Reload-persistent SHA-256 hash chain of analyses, registered-rule outcomes, mutations, receipts and
+  import decisions. Pure reads are not ledgered. The chain detects edits and reordering; it does not establish identity
+  or a trusted timestamp.</p>
   <ol class="le-ledger" id="le-ledger"></ol>
+
+  <h2>Reproducibility receipt</h2>
+  <p class="refs">Seal the current scientific-state hash and audit head with a browser-session signing key. Exported
+  documents embed the receipt; authorship assurance requires pinning the key fingerprint externally.</p>
+  <div class="le-integrity" id="le-reproducibility"></div>
 
   <h2 id="console">Tool console</h2>
   <details>
@@ -130,19 +149,21 @@
   </details>
 
   <footer>
-    <p><strong>Living Evidence v0.1 — workspace mode.</strong> For a finished document of this format, see the
+    <p><strong>Living Evidence v0.2 — aggregate-SMD workspace mode.</strong> For a finished document of this format, see the
     <a href="index.html">Pygmalion-effect exemplar</a>. Source, format spec and authoring template:
     <a href="https://github.com/microckey/living-evidence">github.com/microckey/living-evidence</a> (MIT).</p>
-    <p>For a question that isn't an SMD meta-analysis, see the <a href="board.html">Evidence Board</a> — the same
-    approval-gated authoring, generalized to hypotheses, mechanisms, claims, evidence and open questions.</p>
+    <p><strong>Experimental appendix:</strong> the <a href="board.html">unverified conversation-ingestion sandbox</a>
+    is not part of the aggregate-SMD workflow or its software verification suite.</p>
     <p><noscript>This workspace requires JavaScript: its statistics are computed, not typeset.</noscript></p>
   </footer>
 </main>
 
 <script type="module">
   import { initLivingEvidence } from './lib/living-evidence.js';
+  import { parseEvidenceContent } from './lib/evidence-package.js';
+  import { sha256Hex } from './lib/integrity.js';
 
-  initLivingEvidence({
+  const api = initLivingEvidence({
     mode: 'workspace',
     storageKey: 'le-workspace-v1',
     title: 'Living Evidence Workspace',
@@ -167,6 +188,32 @@
     },
     moderators: { weeks: {}, year: {} },
     claims: [],
+  });
+
+  const importInput = document.getElementById('le-import-file');
+  const importStatus = document.getElementById('le-import-status');
+  importInput.addEventListener('change', async () => {
+    const file = importInput.files?.[0];
+    if (!file) return;
+    importStatus.classList.remove('le-import-error');
+    importStatus.textContent = `Checking ${file.name}…`;
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (bytes.byteLength > 1024 * 1024) throw new Error('import exceeds the 1 MiB browser limit');
+      const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      const extension = file.name.toLowerCase().split('.').pop();
+      const mediaType = file.type || ({ csv: 'text/csv', qmd: 'text/markdown', ipynb: 'application/x-ipynb+json' }[extension] || 'application/json');
+      const pkg = parseEvidenceContent(text, file.name, {
+        sourceArtifact: { filename: file.name, media_type: mediaType, sha256: `sha256:${sha256Hex(bytes)}` },
+      });
+      const result = api.stageEvidencePackage(pkg, { actor: 'human' });
+      importStatus.textContent = `${result.staged_records} record(s) staged. Evidence k has not changed; review each approval card below. Package ${result.package_sha256.slice(0, 24)}…`;
+    } catch (error) {
+      importStatus.classList.add('le-import-error');
+      importStatus.textContent = `Nothing imported: ${error.message}`;
+    } finally {
+      importInput.value = '';
+    }
   });
 </script>
 </body>

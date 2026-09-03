@@ -22,7 +22,7 @@ function near(name, got, want, tol) {
 }
 
 const S = DATASET.studies;
-check('dataset has 19 studies', S.length === 19);
+check('dataset has 19 effect-size records', S.length === 19);
 
 // --- special functions sanity ---
 near('chiSqSf(35.83, 18)', chiSqSf(35.83, 18), 0.0074, 0.0002);

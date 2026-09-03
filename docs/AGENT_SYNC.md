@@ -10,12 +10,59 @@ WebMCP Challenge 2026 entry (https://webmcp.devpost.com/ — deadline
 **2026-09-03 13:00 PDT** = 2026-09-04 05:00 JST; winners 9/23).
 Concept: **Living Evidence — documents your AI can cross-examine.**
 Format (spec + runtime + template) plus one exemplar: a living meta-analysis of
-the Pygmalion effect (Raudenbush 1985 dataset, 19 studies).
+the Pygmalion effect (19 effect-size records representing 18 experiments).
 
 Judging criteria targeted: WebMCP Leverage / Execution / Potential Impact /
 Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
+
+## Status (2026-09-04 — v0.2 scientific-integrity release candidate)
+
+- Canonical UI/API outcomes are now registered-rule `passed / failed /
+  inconclusive / not_run`; legacy verdict codes remain only for compatibility.
+- The exemplar and every analysis disclose 19 effect-size records / 18
+  experiments and the unmodeled Pellegrini–Hicks within-experiment covariance.
+  `c-robust` was narrowed to the leave-one-record-out p<.05 check it actually runs.
+- Records, imports and export appendices now carry structured source/locator/
+  quote/derivation/design/outcome/timepoint/estimand/RoB fields and hashes. RoB
+  validation is structural; instrument-specific aggregation is explicitly not
+  performed. Base-corpus primary checks, derivation checks and structured RoB
+  remain 0/19.
+- Strict local CSV/JSON/QMD/IPYNB packages stage atomically behind per-record
+  human approval. Import decision registries transition pending → partial →
+  approved/rejected/mixed and are cross-checked on restore. Export refuses
+  unresolved proposals.
+- Main/workspace sessions use canonical SHA-256 audit chains with bounded result
+  preimages, device-local persistence with read-back status, and strict restore
+  invariants. P-256 receipts use exact schemas, normalized public-key thumbprints,
+  non-extractable page-load keys and explicit signed-prefix semantics.
+- Self-contained export embeds canonical science plus a signed state/runtime
+  receipt and returns a detached exact-artifact receipt. The external CLI verifies
+  exact bytes, embedded science/runtime, both signatures and their linkage; the
+  real export→CLI path is covered by browser E2E.
+- A frozen four-page PDF baseline, preregistered-style three-task protocol and
+  local scorer ship with neutral “No runs recorded” state. No speed/accuracy or
+  cross-corpus superiority claim is made.
+- README, v0.2 SPEC, Devpost draft, importing/deploy docs and Sites metadata were
+  rewritten to match the implementation. Board remains an experimental,
+  unverified appendix.
+- Final local gates are green: unit, exemplar, workspace (including HTTP/file
+  export and external receipt verification), Atlas and Board suites; Node 24
+  production build; and the built Worker returned HTTP 200 for `/`, `/workspace`,
+  `/atlas` and `/board`. This commit is the exact candidate for Sites deployment.
+
+## Decisions
+
+- 2026-09-04: A human approval is an acceptance into this device-local evidence
+  base, not primary-source or RoB verification. Generic RoB overall/domain logic
+  is not inferred across arbitrary instruments.
+- 2026-09-04: A receipt signs one canonical scientific state and an audit prefix;
+  later reader actions are an unsigned local suffix until resealed. Page-load
+  keys rotate, so authorship/version continuity requires external key anchoring.
+- 2026-09-04: Historical 19-row numerical reproduction remains available but is
+  accompanied by its 18-experiment dependence warning; new package imports reject
+  repeated experiment ids until a covariance-aware engine exists.
 
 ## Status (2026-09-03 23:3x JST — Sites release candidate)
 
@@ -365,7 +412,7 @@ NOT DONE (needs user or daytime):
    Approve → k 19→20, forest re-renders, old badges go stale → re-evaluate.
 7. Close on the ledger: "every question left a trace on the document itself".
 
-## Decisions
+## Earlier decisions
 
 - 2026-09-03: Sites deployment preserves the static runtime via a thin delivery
   adapter; no React rewrite and no iframe. Social metadata is injected by the

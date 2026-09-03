@@ -6,23 +6,66 @@
 // whole session, and finally an EXPORT that must run as a self-contained document
 // with zero network access — that last assertion is the point of the whole file.
 //
-// Servers (both started here): 8501 serves the workspace, 8502 serves the exported
+// Servers (both started here): 8511 serves the workspace, 8512 serves the exported
 // document, always on 127.0.0.1. Playwright comes from the absolute path below.
 import { createRequire } from 'module';
-import { spawn } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import path from 'path';
 import { metaAnalyze } from '../lib/meta-stats.js';
+import { canonicalStringify, sha256Hex } from '../lib/integrity.js';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('/Users/hirokisugimoto/tennis-checker/node_modules/playwright');
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const PORT = 8501;
-const EXPORT_PORT = 8502;
+// Dedicated ports keep this suite isolated when the exemplar E2E runs in parallel.
+const PORT = 8511;
+const EXPORT_PORT = 8512;
 const EXPORT_FILE = path.join(root, 'verify', '_export_test.html');
+const RECEIPT_FILE = path.join(root, 'verify', '_export_test.receipt.json');
 const STORAGE_KEY = 'le-workspace-v1';
+const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
+
+const SMD_VARIANT = 'Hedges_g';
+const EFFECT_DIRECTION = 'positive = higher measured IQ in the expectancy group than control';
+const COLLECTION_FRAME = 'Experiments included in the Raudenbush (1984) teacher-expectancy synthesis';
+
+const traceability = (experimentId, overrides = {}) => ({
+  source_locator: 'Raudenbush (1984), Table 1, named study row',
+  derivation: 'yi and vi transcribed from the checked fixture row; no new calculation performed in this test',
+  study_design: 'teacher-expectancy experiment reported in the secondary synthesis',
+  outcome: 'pupil IQ test score',
+  timepoint: 'post-intervention endpoint reported in the synthesis',
+  experiment_id: experimentId,
+  smd_variant: SMD_VARIANT,
+  effect_direction: EFFECT_DIRECTION,
+  collection_frame: COLLECTION_FRAME,
+  risk_of_bias_status: 'not_assessed',
+  ...overrides,
+});
+
+const receiptPayload = (receipt) => Object.fromEntries([
+  'receipt_version', 'created_at', 'document_version', 'scientific_state_sha256',
+  'runtime_sha256', 'artifact_sha256', 'evidence_version', 'audit_head',
+  'covers_through_run', 'signer_key_fingerprint', 'signer_scope', 'assurance',
+  'not_assured', 'note',
+].map((key) => [key, receipt[key]]));
+
+async function independentlyVerifyReceipt(receipt) {
+  const key = await crypto.subtle.importKey(
+    'jwk', receipt.signature.public_key_jwk,
+    { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify'],
+  );
+  const padded = receipt.signature.value.replace(/-/g, '+').replace(/_/g, '/')
+    + '='.repeat((4 - receipt.signature.value.length % 4) % 4);
+  return crypto.subtle.verify(
+    { name: 'ECDSA', hash: 'SHA-256' }, key,
+    Buffer.from(padded, 'base64'),
+    new TextEncoder().encode(canonicalStringify(receiptPayload(receipt))),
+  );
+}
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -38,18 +81,21 @@ const PROPOSALS = [
     yi: 0.80, vi: 0.0630,
     source: 'Raudenbush (1984), J. Educational Psychology 76(1), Table 1',
     quote: 'd = 0.80, weeks = 1 (Raudenbush 1984, Table 1)',
+    ...traceability('maxwell-1970'),
   },
   {
     author: 'Rosenthal & Jacobson', year: 1968, weeks: 1, setting: 'group', tester: 'aware', n1i: 65, n2i: 255,
     yi: 0.30, vi: 0.0193,
     source: 'Raudenbush (1984), J. Educational Psychology 76(1), Table 1',
     quote: 'd = 0.30, weeks = 1 (Raudenbush 1984, Table 1)',
+    ...traceability('rosenthal-jacobson-1968'),
   },
   {
     author: 'Claiborn', year: 1969, weeks: 24, setting: 'group', tester: 'aware', n1i: 26, n2i: 99,
     yi: -0.32, vi: 0.0484,
     source: 'Raudenbush (1984), J. Educational Psychology 76(1), Table 1',
     quote: 'd = -0.32, weeks = 24 (Raudenbush 1984, Table 1)',
+    ...traceability('claiborn-1969'),
   },
 ];
 
@@ -60,8 +106,49 @@ const PENDING4 = {
   yi: 0.27, vi: 0.0269,
   source: 'Raudenbush (1984), J. Educational Psychology 76(1), Table 1',
   quote: 'd = 0.27, weeks = 0 (Raudenbush 1984, Table 1)',
+  ...traceability('kester-1969'),
 };
 const ALL_RECORDS = [...PROPOSALS, PENDING4];
+
+const IMPORT_PACKAGE = {
+  schema_version: 'living-evidence-smd-package/1',
+  dataset: {
+    id: 'workspace-e2e-import',
+    label: 'Workspace E2E import fixture',
+    effect_measure: 'SMD',
+    smd_variant: SMD_VARIANT,
+    smd_variant_detail: null,
+    effect_direction: EFFECT_DIRECTION,
+    collection_frame: COLLECTION_FRAME,
+  },
+  studies: [{
+    id: 'fixture-01',
+    author: 'Import Fixture',
+    year: 2024,
+    yi: 0.21,
+    vi: 0.04,
+    weeks: 6,
+    setting: 'group',
+    tester: 'blind',
+    n1i: 40,
+    n2i: 41,
+    source: 'Local import fixture',
+    quote: 'Hedges g = 0.21; sampling variance = 0.04.',
+    source_locator: 'fixture table, row 1',
+    derivation: 'Hedges g and sampling variance transcribed directly from the fixture table',
+    study_design: 'parallel-group randomized experiment',
+    outcome: 'fixture continuous outcome',
+    timepoint: '6-week endpoint',
+    experiment_id: 'import-fixture-2024',
+    risk_of_bias_status: 'not_assessed',
+  }],
+  claims: [],
+  source_artifact: {
+    filename: 'workspace-e2e-import.json',
+    media_type: 'application/json',
+    sha256: `sha256:${'a'.repeat(64)}`,
+  },
+};
 
 // The expected fit, computed HERE with the same engine, in the order the human
 // approves them. The page must reproduce it exactly, not approximately.
@@ -109,6 +196,7 @@ try {
   }, [name, args]);
   const boot = async () => {
     await page.waitForFunction(() => window.LivingEvidence && window.LivingEvidence.tools.length > 0, null, { timeout: 10000 });
+    await page.evaluate(() => window.LivingEvidence.ready);
   };
 
   // ------------------------------------------------ 1. fresh, empty workspace
@@ -116,8 +204,10 @@ try {
   await page.goto(`http://127.0.0.1:${PORT}/workspace.html`, { waitUntil: 'load' });
   await boot();
   const tools = await page.evaluate(() => window.LivingEvidence.tools.map((t) => t.name));
-  check('workspace exposes 15 tools (12 document + 3 workspace)', tools.length === 15, tools.join(','));
-  for (const t of ['set_hypothesis', 'add_claim', 'export_document']) check(`workspace tool present: ${t}`, tools.includes(t));
+  check('workspace exposes 18 tools (15 document + 3 workspace)', tools.length === 18, tools.join(','));
+  for (const t of ['get_data_manifest', 'get_reproducibility_status', 'create_reproducibility_receipt', 'set_hypothesis', 'add_claim', 'export_document']) {
+    check(`workspace tool present: ${t}`, tools.includes(t));
+  }
   check('mode reported as workspace', await page.evaluate(() => window.LivingEvidence.mode) === 'workspace');
   const status = await page.textContent('#le-status');
   check('status banner explains the fallback', /Tool console/.test(status), status);
@@ -170,6 +260,16 @@ try {
   const { quote, ...noQuote } = PROPOSALS[0];
   const noQuoteErr = await callErr('propose_study', noQuote);
   check('propose_study without a quote rejected', /missing required field: quote/.test(noQuoteErr || ''), noQuoteErr);
+  const proposeSchema = await page.evaluate(() => window.LivingEvidence.tools.find((t) => t.name === 'propose_study').inputSchema);
+  const traceabilityRequired = [
+    'source', 'quote', 'source_locator', 'derivation', 'study_design', 'outcome', 'timepoint',
+    'experiment_id', 'smd_variant', 'effect_direction', 'collection_frame', 'risk_of_bias_status',
+  ];
+  check('propose_study schema requires the full traceability and estimand contract',
+    traceabilityRequired.every((field) => proposeSchema.required.includes(field))
+      && proposeSchema.properties.smd_variant.enum.includes('Hedges_g')
+      && proposeSchema.properties.risk_of_bias_status.enum.includes('not_assessed'),
+    JSON.stringify(proposeSchema.required));
 
   for (const p of PROPOSALS) {
     const res = await call('propose_study', p);
@@ -191,9 +291,23 @@ try {
   check('bound k updated to 3', (await page.textContent('[data-le-bind="k"]')) === '3');
   check('main forest plot now renders', await page.locator('#le-main-figure svg').count() === 1);
   check('approved records carry structured provenance',
-    (await call('get_studies', {})).studies.every((s) => s.provenance && typeof s.provenance === 'object' && s.provenance.quote),
+    (await call('get_studies', {})).studies.every((s) => s.provenance && typeof s.provenance === 'object'
+      && s.provenance.quote && s.provenance.source_locator && s.provenance.derivation
+      && s.study_design && s.outcome && s.timepoint && s.experiment_id
+      && s.smd_variant === SMD_VARIANT && s.effect_direction === EFFECT_DIRECTION
+      && s.risk_of_bias?.status === 'not_assessed'),
     JSON.stringify((await call('get_studies', {})).studies.map((s) => s.provenance)));
   check('three human approvals in the ledger', await page.locator('#le-ledger .le-human').count() === 3);
+  const manifest1 = await call('get_data_manifest', { include_records: false });
+  check('manifest distinguishes effect-size records from experiments',
+    manifest1.dataset.record_count === 3 && manifest1.dataset.experiment_count === 3,
+    JSON.stringify(manifest1.dataset));
+  check('manifest publishes a SHA-256 scientific-state id and explicit verification gaps',
+    SHA256_ID.test(manifest1.scientific_state_sha256)
+      && manifest1.evidence_quality.records_with_source_locator === 3
+      && manifest1.evidence_quality.effect_size_derivation_checked === 0
+      && manifest1.evidence_quality.structured_risk_of_bias_assessment_supplied_unverified === 0,
+    JSON.stringify(manifest1.evidence_quality));
 
   // --------------------------------------------------- 3. the numbers are ours
   console.log('\n# 3 — the page reproduces the engine exactly');
@@ -212,6 +326,19 @@ try {
   const feFit = await call('run_meta_analysis', { method: 'FE' });
   check('page FE estimate matches the closed-form inverse-variance mean to 1e-9',
     Math.abs(feFit.estimate - feOracle) < 1e-9, `${feFit.estimate} vs ${feOracle} (unrounded ${feRaw})`);
+  const audit3 = await call('get_audit_log', {});
+  check('audit reports a valid SHA-256 chain',
+    audit3.chain.valid === true && audit3.chain.checked_entries === audit3.entries.length
+      && SHA256_ID.test(audit3.chain.head), JSON.stringify(audit3.chain));
+  check('every ledger envelope is SHA-256 sealed in append order',
+    audit3.entries.every((entry, index) => SHA256_ID.test(entry.result_digest)
+      && SHA256_ID.test(entry.entry_hash)
+      && entry.previous_entry_hash === (index ? audit3.entries[index - 1].entry_hash : null)),
+    JSON.stringify(audit3.entries.at(-1)));
+  const lastLedgerTitle = await page.locator('#le-ledger .le-ledger-row').last().getAttribute('title');
+  check('visible ledger exposes full SHA-256 entry/result digests',
+    /^entry sha256:[0-9a-f]{64} · result sha256:[0-9a-f]{64} · inputs /.test(lastLedgerTitle || ''),
+    String(lastLedgerTitle));
 
   // ------------------------------------------------------------ 4. add a claim
   console.log('\n# 4 — a claim added as data, then tested');
@@ -275,6 +402,10 @@ try {
 
   const verdict = await call('evaluate_claim', { claim_id: CLAIM.id });
   check('claim verdict is supported', verdict.verdict === 'supported', JSON.stringify(verdict.reason));
+  check('public result frames the legacy verdict as a registered-rule outcome',
+    verdict.rule_outcome === 'passed' && verdict.outcome_type === 'document_registered_rule'
+      && /document-registered rule outcome only/.test(verdict.rule_outcome_scope),
+    JSON.stringify({ rule_outcome: verdict.rule_outcome, scope: verdict.rule_outcome_scope }));
   // Compare against the template's OWN formatting (fmtNumber = 4 significant digits),
   // not the raw number — otherwise this passes or fails on trailing-zero luck.
   check('verdict quotes the page statistics',
@@ -283,14 +414,30 @@ try {
   check('badge painted in the claims list', await page.locator(`[data-claim="${CLAIM.id}"] .le-chip-supported`).count() === 1);
   check('no badge is stale (no approvals since)', await page.locator('.le-chip-stale').count() === 0);
   const listed = (await call('list_claims', {})).claims;
-  check('list_claims carries the new AST', listed.length === 2 && listed[0].machine_check.analysis === 'overall', JSON.stringify(listed.map((c) => c.id)));
+  check('list_claims carries the AST and canonical registered-rule outcome',
+    listed.length === 2 && listed[0].machine_check.analysis === 'overall'
+      && listed[0].rule_outcome === 'passed' && listed[1].rule_outcome === 'not_run',
+    JSON.stringify(listed.map((c) => ({ id: c.id, rule_outcome: c.rule_outcome }))));
 
   // ------------------------------------------------------------- 5. reload
   console.log('\n# 5 — the workspace survives a reload');
   // A fourth proposal, left UNDECIDED on purpose: the reload must bring the approval
   // card back, still actionable, not silently swallow the agent's open proposal.
-  const pending4 = await call('propose_study', PENDING4);
-  check('fourth study proposed and pending', pending4.status === 'pending_human_approval', JSON.stringify(pending4));
+  const pending4 = await page.evaluate(async (proposal) => {
+    const returned = await window.LivingEvidence.invokeTool('propose_study', proposal);
+    const original = { study_id: returned.study_id, record_hash: returned.record_hash, status: returned.status };
+    // Attack the exact object returned to an in-page caller. Playwright's normal
+    // serialization would otherwise hide an accidental shared-reference bug.
+    returned.study_id = 'attacker-controlled-id';
+    returned.record_hash = `sha256:${'0'.repeat(64)}`;
+    returned.yi = 9.99;
+    return { original, mutated_return: returned };
+  }, PENDING4);
+  check('fourth study proposed and pending',
+    pending4.original.status === 'pending_human_approval'
+      && pending4.mutated_return.study_id === 'attacker-controlled-id'
+      && pending4.mutated_return.yi === 9.99,
+    JSON.stringify(pending4));
   check('one undecided approval card before the reload', await page.locator('.le-pending-card').count() === 1);
   const humanRowsBefore = await page.locator('#le-ledger .le-human').count();
   const badgeBefore = await page.textContent(`[data-claim="${CLAIM.id}"] .le-chip`);
@@ -332,11 +479,172 @@ try {
   check('approving the restored proposal grows the base to k=4', ov2b.evidence_base.k === 4, String(ov2b.evidence_base.k));
   check('evidence version bumped to 5', ov2b.evidence_base.evidence_version === 5, String(ov2b.evidence_base.evidence_version));
   check('bound k updated to 4', (await page.textContent('[data-le-bind="k"]')) === '4');
+  const approvedFourth = (await call('get_studies', {})).studies.find((study) => study.author === PENDING4.author);
+  check('mutating the proposal return cannot change what the human approval accepts',
+    approvedFourth.id === pending4.original.study_id
+      && approvedFourth.yi === PENDING4.yi
+      && approvedFourth.provenance.record_hash === pending4.original.record_hash,
+    JSON.stringify(approvedFourth));
   check('the k=3 verdict is now marked stale', await page.locator('.le-chip-stale').count() === 1);
   const verdict4 = await call('evaluate_claim', { claim_id: CLAIM.id });
   check('re-evaluated verdict is fresh at evidence version 5',
     verdict4.stale === false && verdict4.evaluated_version === 5, JSON.stringify(verdict4));
   check('no stale badge left after re-evaluation', await page.locator('.le-chip-stale').count() === 0);
+
+  // ---------------------------------------------------- 5b. signed persistence
+  console.log('\n# 5b — a signed receipt survives reload and rejects tampering');
+  const signedAttack = await page.evaluate(async () => {
+    const returned = await window.LivingEvidence.invokeTool('create_reproducibility_receipt', {});
+    const original = structuredClone(returned);
+    returned.scientific_state_sha256 = `sha256:${'f'.repeat(64)}`;
+    returned.signature.value = `${returned.signature.value[0] === 'A' ? 'B' : 'A'}${returned.signature.value.slice(1)}`;
+    returned.signature.public_key_jwk.x = 'attacker-controlled-key-coordinate';
+    return { original, mutated_return: returned };
+  });
+  const signed = signedAttack.original;
+  check('receipt signs the scientific state and audit anchor with ECDSA P-256',
+    signed.receipt_version === 'living-evidence-receipt/1'
+      && SHA256_ID.test(signed.document_version)
+      && signed.document_version === signed.scientific_state_sha256
+      && SHA256_ID.test(signed.audit_head)
+      && SHA256_ID.test(signed.signer_key_fingerprint)
+      && signed.signature?.algorithm === 'ECDSA-P256-SHA256'
+      && signed.artifact_sha256 === null,
+    JSON.stringify(signed));
+  check('receipt verifies independently of the page runtime', await independentlyVerifyReceipt(signed), 'signature verification returned false');
+  const sealedStatus = await call('get_reproducibility_status', {});
+  check('mutating the returned receipt/signature cannot alter cached verification or stored bytes',
+    sealedStatus.status === 'matches_self_signed_session_receipt'
+      && sealedStatus.latest_receipt_verification.status === 'valid_current_state'
+      && sealedStatus.latest_receipt_verification.signature_status === 'valid'
+      && sealedStatus.latest_signed_receipt.signature.value === signed.signature.value
+      && sealedStatus.latest_signed_receipt.signature.public_key_jwk.x === signed.signature.public_key_jwk.x
+      && sealedStatus.latest_signed_receipt.scientific_state_sha256 === signed.scientific_state_sha256
+      && signedAttack.mutated_return.signature.value !== signed.signature.value,
+    JSON.stringify(sealedStatus.latest_receipt_verification));
+  await page.reload({ waitUntil: 'load' });
+  await boot();
+  const restoredReceiptStatus = await call('get_reproducibility_status', {});
+  check('persisted receipt is cryptographically re-verified after reload',
+    restoredReceiptStatus.status === 'valid_science_with_signed_audit_prefix'
+      && restoredReceiptStatus.latest_receipt_verification.signature_status === 'valid'
+      && restoredReceiptStatus.latest_receipt_verification.unsigned_runs_after_receipt === 1
+      && restoredReceiptStatus.latest_signed_receipt.signature.value === signed.signature.value,
+    JSON.stringify(restoredReceiptStatus.latest_receipt_verification));
+  check('signed reload keeps the authored evidence and claims',
+    restoredReceiptStatus.evidence_version === 5
+      && (await call('get_document_overview', {})).evidence_base.k === 4,
+    JSON.stringify(restoredReceiptStatus));
+
+  const referenceIsolation = await page.evaluate(async () => {
+    const api = window.LivingEvidence;
+    const studiesView = await api.invokeTool('get_studies', {});
+    const auditView = await api.invokeTool('get_audit_log', {});
+    const claimsView = await api.invokeTool('list_claims', {});
+    const apiClaimsView = api.claims;
+    const statusView = await api.invokeTool('get_reproducibility_status', {});
+    const stateView = api.state;
+    const baseline = {
+      study: structuredClone(studiesView.studies[0]),
+      audit_length: auditView.entries.length,
+      first_entry_hash: auditView.entries[0].entry_hash,
+      claim_test: structuredClone(claimsView.claims[0].machine_check),
+      api_claim_test: structuredClone(apiClaimsView[0].test),
+      receipt_signature: statusView.latest_signed_receipt.signature.value,
+      receipt_verification: statusView.latest_receipt_verification.signature_status,
+      evidence_version: stateView.evidenceVersion,
+    };
+
+    // Attack every nested public view while remaining inside the same JS realm.
+    studiesView.studies[0].yi = 9.99;
+    studiesView.studies[0].provenance.quote = 'attacker changed the quote';
+    studiesView.studies[0].risk_of_bias.status = 'low';
+    auditView.entries[0].entry_hash = `sha256:${'0'.repeat(64)}`;
+    auditView.entries[0].summary = 'attacker rewrote history';
+    auditView.entries.push({ run: 999, entry_hash: `sha256:${'1'.repeat(64)}` });
+    claimsView.claims[0].machine_check.verdicts[0].when[0].value = -999;
+    apiClaimsView[0].test.verdicts[0].when[0].value = -998;
+    statusView.latest_signed_receipt.signature.value = 'attacker-signature';
+    statusView.latest_receipt_verification.signature_status = 'invalid';
+    stateView.approved[0].yi = 8.88;
+    stateView.approved[0].provenance.quote = 'attacker state quote';
+    stateView.audit[0].entry_hash = `sha256:${'2'.repeat(64)}`;
+    stateView.claimStatus.clear();
+    stateView.lastReceipt.signature.value = 'attacker-state-signature';
+    stateView.lastReceiptSignatureStatus = 'invalid';
+    stateView.evidenceVersion = 999;
+
+    const freshStudies = await api.invokeTool('get_studies', {});
+    const freshAudit = await api.invokeTool('get_audit_log', {});
+    const freshClaims = await api.invokeTool('list_claims', {});
+    const freshApiClaims = api.claims;
+    const freshStatus = await api.invokeTool('get_reproducibility_status', {});
+    const freshState = api.state;
+    return {
+      baseline,
+      fresh: {
+        study: freshStudies.studies[0],
+        audit_length: freshAudit.entries.length,
+        first_entry_hash: freshAudit.entries[0].entry_hash,
+        audit_valid: freshAudit.chain.valid,
+        claim_test: freshClaims.claims[0].machine_check,
+        api_claim_test: freshApiClaims[0].test,
+        receipt_signature: freshStatus.latest_signed_receipt.signature.value,
+        receipt_verification: freshStatus.latest_receipt_verification.signature_status,
+        receipt_status: freshStatus.status,
+        evidence_version: freshState.evidenceVersion,
+        state_study: freshState.approved[0],
+        state_audit_hash: freshState.audit[0].entry_hash,
+        state_receipt_signature: freshState.lastReceipt.signature.value,
+        state_receipt_status: freshState.lastReceiptSignatureStatus,
+      },
+    };
+  });
+  check('mutating get_studies records/provenance/RoB cannot alter internal evidence',
+    referenceIsolation.fresh.study.yi === referenceIsolation.baseline.study.yi
+      && referenceIsolation.fresh.study.provenance.quote === referenceIsolation.baseline.study.provenance.quote
+      && referenceIsolation.fresh.study.risk_of_bias.status === referenceIsolation.baseline.study.risk_of_bias.status,
+    JSON.stringify(referenceIsolation.fresh.study));
+  check('mutating get_audit_log entries cannot rewrite or append internal history',
+    referenceIsolation.fresh.audit_valid === true
+      && referenceIsolation.fresh.audit_length === referenceIsolation.baseline.audit_length
+      && referenceIsolation.fresh.first_entry_hash === referenceIsolation.baseline.first_entry_hash,
+    JSON.stringify(referenceIsolation.fresh));
+  check('mutating list_claims or the public claims getter cannot rewrite the registered AST',
+    JSON.stringify(referenceIsolation.fresh.claim_test) === JSON.stringify(referenceIsolation.baseline.claim_test)
+      && JSON.stringify(referenceIsolation.fresh.api_claim_test) === JSON.stringify(referenceIsolation.baseline.api_claim_test),
+    JSON.stringify(referenceIsolation.fresh.claim_test));
+  check('mutating reproducibility-status receipt views cannot poison cached verification',
+    referenceIsolation.fresh.receipt_signature === referenceIsolation.baseline.receipt_signature
+      && referenceIsolation.fresh.receipt_verification === 'valid'
+      && referenceIsolation.fresh.receipt_status === 'valid_science_with_signed_audit_prefix',
+    JSON.stringify(referenceIsolation.fresh));
+  check('the public state getter is a deep snapshot, not an internal mutation channel',
+    referenceIsolation.fresh.evidence_version === referenceIsolation.baseline.evidence_version
+      && referenceIsolation.fresh.state_study.yi === referenceIsolation.baseline.study.yi
+      && referenceIsolation.fresh.state_study.provenance.quote === referenceIsolation.baseline.study.provenance.quote
+      && referenceIsolation.fresh.state_audit_hash === referenceIsolation.baseline.first_entry_hash
+      && referenceIsolation.fresh.state_receipt_signature === referenceIsolation.baseline.receipt_signature
+      && referenceIsolation.fresh.state_receipt_status === 'valid',
+    JSON.stringify(referenceIsolation.fresh));
+
+  await page.evaluate((key) => {
+    const snapshot = JSON.parse(localStorage.getItem(key));
+    const value = snapshot.lastReceipt.signature.value;
+    snapshot.lastReceipt.signature.value = `${value[0] === 'A' ? 'B' : 'A'}${value.slice(1)}`;
+    localStorage.setItem(key, JSON.stringify(snapshot));
+  }, STORAGE_KEY);
+  await page.reload({ waitUntil: 'load' });
+  await boot();
+  const tamperedReceiptStatus = await call('get_reproducibility_status', {});
+  check('tampered persisted receipt is not trusted on restoration',
+    tamperedReceiptStatus.status === 'receipt_signature_invalid'
+      && tamperedReceiptStatus.latest_receipt_verification.signature_status === 'invalid',
+    JSON.stringify(tamperedReceiptStatus.latest_receipt_verification));
+  check('receipt tampering does not erase the separately valid evidence/audit snapshot',
+    tamperedReceiptStatus.audit_chain.valid === true
+      && (await call('get_document_overview', {})).evidence_base.k === 4,
+    JSON.stringify(tamperedReceiptStatus.audit_chain));
 
   // ------------------------------------------------------------- 6. export
   console.log('\n# 6 — export a self-contained document');
@@ -347,28 +655,103 @@ try {
     const r = await window.LivingEvidence.invokeTool('export_document', {}, { actor: 'human' });
     return {
       keys: Object.keys(r), filename: r.filename, bytes: r.bytes,
-      download_started: r.download_started, content_digest: r.content_digest, has_html: 'html' in r,
+      download_started: r.download_started, content_digest: r.content_digest,
+      artifact_sha256: r.artifact_sha256, document_version: r.document_version,
+      receipt: r.receipt, embedded_state_receipt: r.embedded_state_receipt,
+      has_html: 'html' in r,
     };
   });
   check('the default export response does NOT carry the html', exportedDefault.has_html === false, exportedDefault.keys.join(','));
   check('the default export response says the download started',
     exportedDefault.download_started === true, JSON.stringify(exportedDefault.download_started));
-  check('the default export response carries a content digest',
-    /^[0-9a-f]{8}$/.test(exportedDefault.content_digest || ''), String(exportedDefault.content_digest));
+  check('the default export response carries an exact SHA-256 artifact digest',
+    SHA256_ID.test(exportedDefault.content_digest)
+      && exportedDefault.content_digest === exportedDefault.artifact_sha256
+      && exportedDefault.receipt.artifact_sha256 === exportedDefault.artifact_sha256,
+    String(exportedDefault.content_digest));
+  check('default detached receipt is signed; embedded receipt avoids the self-hash paradox',
+    await independentlyVerifyReceipt(exportedDefault.receipt)
+      && exportedDefault.receipt.document_version === exportedDefault.document_version
+      && exportedDefault.embedded_state_receipt.artifact_sha256 === null
+      && await independentlyVerifyReceipt(exportedDefault.embedded_state_receipt),
+    JSON.stringify(exportedDefault.embedded_state_receipt));
   check('the default export response still reports filename and size',
     /^living-evidence-export-\d{8}-\d{4}\.html$/.test(exportedDefault.filename) && exportedDefault.bytes > 50000,
     `${exportedDefault.filename} / ${exportedDefault.bytes}`);
 
   const exported = await page.evaluate(async () => {
-    const r = await window.LivingEvidence.invokeTool('export_document', { include_html: true }, { actor: 'human' });
-    return { filename: r.filename, bytes: r.bytes, html: r.html, content_digest: r.content_digest };
+    const api = window.LivingEvidence;
+    const realFetch = window.fetch;
+    let markFetchStarted;
+    let releaseFetch;
+    const fetchStarted = new Promise((resolve) => { markFetchStarted = resolve; });
+    const fetchReleased = new Promise((resolve) => { releaseFetch = resolve; });
+    let heldOneFetch = false;
+    window.fetch = async (...args) => {
+      if (!heldOneFetch) {
+        heldOneFetch = true;
+        markFetchStarted();
+        await fetchReleased;
+      }
+      return realFetch(...args);
+    };
+    try {
+      const exportPromise = api.invokeTool('export_document', { include_html: true }, { actor: 'human' });
+      await fetchStarted;
+      // This call is deliberately ledgered while export_document is suspended in
+      // its source reads. The export must capture one coherent state before signing.
+      const concurrent = await api.invokeTool('run_meta_analysis', { method: 'REML' }, { actor: 'agent' });
+      const afterConcurrent = await api.invokeTool('get_audit_log', {});
+      const concurrentEntry = afterConcurrent.entries.at(-1);
+      releaseFetch();
+      const r = await exportPromise;
+      return {
+        filename: r.filename, bytes: r.bytes, html: r.html,
+        content_digest: r.content_digest, artifact_sha256: r.artifact_sha256,
+        document_version: r.document_version, receipt: r.receipt,
+        embedded_state_receipt: r.embedded_state_receipt,
+        concurrent_run: concurrent.run,
+        concurrent_entry: concurrentEntry,
+      };
+    } finally {
+      releaseFetch();
+      window.fetch = realFetch;
+    }
   });
   check('include_html:true adds the html to the same response', typeof exported.html === 'string' && exported.html.length > 50000, String(typeof exported.html));
-  // Same document either way — only the export timestamp inside it differs, and that
-  // string has a fixed length, so the byte count must match exactly.
-  check('include_html returns the same document the default call digested',
-    exported.bytes === exportedDefault.bytes && /^[0-9a-f]{8}$/.test(exported.content_digest || ''),
+  // A second export legitimately grows because the first export and its detached
+  // receipt are now part of the persisted audit history embedded in the document.
+  check('include_html returns another complete, independently digested document',
+    exported.bytes >= exportedDefault.bytes && SHA256_ID.test(exported.content_digest),
     `${exported.bytes} vs ${exportedDefault.bytes}`);
+  check('artifact SHA-256 covers the exact returned HTML bytes',
+    exported.artifact_sha256 === `sha256:${sha256Hex(exported.html)}`
+      && exported.content_digest === exported.artifact_sha256
+      && exported.receipt.artifact_sha256 === exported.artifact_sha256,
+    `${exported.artifact_sha256} vs sha256:${sha256Hex(exported.html)}`);
+  check('detached exact-artifact receipt has a valid independent signature',
+    await independentlyVerifyReceipt(exported.receipt)
+      && exported.receipt.document_version === exported.document_version,
+    JSON.stringify(exported.receipt));
+  check('embedded receipt signs state/runtime but does not falsely claim to sign its containing bytes',
+    exported.embedded_state_receipt.artifact_sha256 === null
+      && SHA256_ID.test(exported.embedded_state_receipt.runtime_sha256)
+      && await independentlyVerifyReceipt(exported.embedded_state_receipt),
+    JSON.stringify(exported.embedded_state_receipt));
+  check('export remains internally consistent when a ledgered call runs during its awaits',
+    exported.concurrent_entry.tool === 'run_meta_analysis'
+      && exported.concurrent_entry.run === exported.concurrent_run
+      && exported.embedded_state_receipt.covers_through_run === exported.concurrent_run
+      && exported.receipt.covers_through_run === exported.concurrent_run
+      && exported.embedded_state_receipt.audit_head === exported.concurrent_entry.entry_hash
+      && exported.receipt.audit_head === exported.concurrent_entry.entry_hash
+      && exported.html.includes(exported.concurrent_entry.entry_hash),
+    JSON.stringify({
+      concurrent_run: exported.concurrent_run,
+      embedded_covers: exported.embedded_state_receipt.covers_through_run,
+      detached_covers: exported.receipt.covers_through_run,
+      concurrent_hash: exported.concurrent_entry.entry_hash,
+    }));
   check('export filename is timestamped', /^living-evidence-export-\d{8}-\d{4}\.html$/.test(exported.filename), exported.filename);
   check('export is a substantial single file', exported.bytes > 50000, String(exported.bytes));
   check('export inlines the engine (no module imports left)', !/^import\s/m.test(exported.html), '');
@@ -385,6 +768,20 @@ try {
     exportEntry.actor === 'human', `actor=${exportEntry.actor}`);
 
   fs.writeFileSync(EXPORT_FILE, exported.html);
+  fs.writeFileSync(RECEIPT_FILE, `${JSON.stringify(exported.receipt, null, 2)}\n`);
+  const cliVerification = JSON.parse(execFileSync(
+    process.execPath,
+    ['scripts/verify-receipt.mjs', RECEIPT_FILE, EXPORT_FILE],
+    { cwd: root, encoding: 'utf8' },
+  ));
+  check('external CLI verifies exact bytes, embedded science/runtime and both signatures',
+    cliVerification.signature_valid === true
+      && cliVerification.artifact_valid === true
+      && cliVerification.embedded_receipt_signature_valid === true
+      && cliVerification.embedded_scientific_state_valid === true
+      && cliVerification.embedded_runtime_valid === true
+      && cliVerification.detached_embedded_link_valid === true,
+    JSON.stringify(cliVerification));
   const page2 = await context.newPage();
   const requested = [];
   page2.on('request', (r) => requested.push(r.url()));
@@ -392,10 +789,15 @@ try {
   page2.on('pageerror', (e) => errors2.push(`pageerror: ${e.message}`));
   page2.on('console', (m) => { if (m.type() === 'error') errors2.push(`console.error: ${m.text()}`); });
   await page2.goto(`http://127.0.0.1:${EXPORT_PORT}/verify/_export_test.html`, { waitUntil: 'load' });
-  await page2.waitForFunction(() => window.LivingEvidence && window.LivingEvidence.tools.length > 0, null, { timeout: 10000 });
+  try {
+    await page2.waitForFunction(() => window.LivingEvidence && window.LivingEvidence.tools.length > 0, null, { timeout: 10000 });
+  } catch (error) {
+    throw new Error(`exported document did not boot: ${errors2.join(' | ') || error.message}`);
+  }
+  await page2.evaluate(() => window.LivingEvidence.ready);
 
   const tools2 = await page2.evaluate(() => window.LivingEvidence.tools.map((t) => t.name));
-  check('exported document boots its own runtime', tools2.length >= 12, String(tools2.length));
+  check('exported document boots all 15 read/analysis/receipt tools', tools2.length === 15, String(tools2.length));
   check('exported document is in document mode (no workspace tools)',
     await page2.evaluate(() => window.LivingEvidence.mode) === 'document' && !tools2.includes('add_claim'), tools2.join(','));
   const ov3 = await page2.evaluate(() => window.LivingEvidence.invokeTool('get_document_overview', {}));
@@ -403,6 +805,22 @@ try {
   check('exported hypothesis travelled with it', ov3.hypothesis === hyp, ov3.hypothesis);
   check('exported bound k rendered', (await page2.textContent('[data-le-bind="k"]')) === '4');
   check('exported forest plot rendered', await page2.locator('#le-main-figure svg').count() === 1);
+  const publishedStatus = await page2.evaluate(() => window.LivingEvidence.invokeTool('get_reproducibility_status', {}));
+  check('exported page re-verifies its embedded published receipt',
+    publishedStatus.status === 'signed_scientific_state_matches_published_receipt_with_local_audit_suffix'
+      && publishedStatus.published_receipt_verification.signature_status === 'valid'
+      && publishedStatus.published_receipt_verification.scientific_state_matches === true
+      && publishedStatus.published_receipt_verification.audit_anchor_matches === true,
+    JSON.stringify(publishedStatus.published_receipt_verification));
+  check('export preserves the workspace audit prefix, then appends only its own boot entry',
+    publishedStatus.audit_chain.valid === true
+      && publishedStatus.audit_chain.checked_entries === exported.embedded_state_receipt.covers_through_run + 1,
+    JSON.stringify(publishedStatus.audit_chain));
+  const exportedManifest = await page2.evaluate(() => window.LivingEvidence.invokeTool('get_data_manifest', {}));
+  check('export preserves canonical dataset identity and imported-package registry',
+    exportedManifest.dataset.id === 'workspace'
+      && Array.isArray(exportedManifest.imported_packages),
+    JSON.stringify({ dataset: exportedManifest.dataset.id, imports: exportedManifest.imported_packages }));
   const v2 = await page2.evaluate((id) => window.LivingEvidence.invokeTool('evaluate_claim', { claim_id: id }), CLAIM.id);
   // The workspace's own latest verdict (k=4, evidence version 5) is the contract the
   // exported document has to reproduce — same rule, same evidence base, same answer.
@@ -435,12 +853,14 @@ try {
   // The claim of the format is "runs from file:// with no server". Test it as such.
   await page2.goto(`file://${EXPORT_FILE}`, { waitUntil: 'load' });
   await page2.waitForFunction(() => window.LivingEvidence && window.LivingEvidence.tools.length > 0, null, { timeout: 10000 });
+  await page2.evaluate(() => window.LivingEvidence.ready);
   const toolsFile = await page2.evaluate(() => window.LivingEvidence.tools.map((t) => t.name));
-  check('exported document boots from file:// with no server', toolsFile.length >= 12, String(toolsFile.length));
+  check('exported document boots from file:// with no server', toolsFile.length === 15, String(toolsFile.length));
   check('file:// document renders its forest plot', await page2.locator('#le-main-figure svg').count() === 1);
   check('exported document raised no errors (http and file://)', errors2.length === 0, errors2.join(' | '));
   await page2.close();
   fs.unlinkSync(EXPORT_FILE);
+  fs.unlinkSync(RECEIPT_FILE);
   check('temp export file cleaned up', !fs.existsSync(EXPORT_FILE));
 
   // ------------------------------------------------------------- 7. reset
@@ -456,6 +876,83 @@ try {
   check('reset clears the hypothesis', /not set/.test(await page.textContent('#le-hypothesis')));
   check('reset clears the ledger to a single boot row', await page.locator('#le-ledger .le-ledger-row').count() === 1);
 
+  // ----------------------------------------------- 8. strict authoring import
+  console.log('\n# 8 — strict evidence packages stage atomically and retain provenance');
+  const invalidImport = structuredClone(IMPORT_PACKAGE);
+  invalidImport.studies[0].yi = '0.21'; // JSON packages must not coerce numeric strings.
+  const beforeInvalidImport = {
+    pending: await page.locator('.le-pending-card').count(),
+    ledger: (await call('get_audit_log', {})).entries.length,
+  };
+  const invalidImportResult = await page.evaluate((pkg) => {
+    try { return { ok: true, value: window.LivingEvidence.stageEvidencePackage(pkg, { actor: 'human' }) }; }
+    catch (error) { return { ok: false, error: error.message }; }
+  }, invalidImport);
+  check('JSON import refuses numeric-string coercion',
+    invalidImportResult.ok === false && /JSON number, not a string/.test(invalidImportResult.error || ''),
+    JSON.stringify(invalidImportResult));
+  check('failed strict import is atomic (no card, ledger row or import registry)',
+    await page.locator('.le-pending-card').count() === beforeInvalidImport.pending
+      && (await call('get_audit_log', {})).entries.length === beforeInvalidImport.ledger
+      && (await call('get_data_manifest', {})).imported_packages.length === 0,
+    JSON.stringify(beforeInvalidImport));
+
+  const stagedImport = await page.evaluate((pkg) => window.LivingEvidence.stageEvidencePackage(pkg, { actor: 'human' }), IMPORT_PACKAGE);
+  check('valid v1 package stages one record behind the human gate',
+    stagedImport.status === 'pending_human_review'
+      && stagedImport.staged_records === 1
+      && stagedImport.staged_study_ids.length === 1
+      && SHA256_ID.test(stagedImport.package_sha256),
+    JSON.stringify(stagedImport));
+  check('staging leaves evidence k unchanged and shows exactly one approval card',
+    (await call('get_document_overview', {})).evidence_base.k === 0
+      && await page.locator('.le-pending-card').count() === 1,
+    await page.textContent('#le-pending'));
+  const importManifest = await call('get_data_manifest', {});
+  check('manifest retains package identity and exact source-artifact hash',
+    importManifest.imported_packages.length === 1
+      && importManifest.imported_packages[0].package_sha256 === stagedImport.package_sha256
+      && importManifest.imported_packages[0].dataset.id === IMPORT_PACKAGE.dataset.id
+      && importManifest.imported_packages[0].source_artifact.sha256 === IMPORT_PACKAGE.source_artifact.sha256,
+    JSON.stringify(importManifest.imported_packages));
+
+  await page.click('.le-pending-card .le-btn-approve');
+  await page.waitForTimeout(150);
+  const importedStudy = (await call('get_studies', {})).studies[0];
+  check('human approval includes the imported record and retains row/package provenance',
+    (await call('get_document_overview', {})).evidence_base.k === 1
+      && importedStudy.provenance.import_package_sha256 === stagedImport.package_sha256
+      && importedStudy.provenance.source_record_id === IMPORT_PACKAGE.studies[0].id
+      && importedStudy.provenance.source_artifact.sha256 === IMPORT_PACKAGE.source_artifact.sha256
+      && importedStudy.provenance.verification_status === 'human_accepted_extraction_not_independently_verified'
+      && importedStudy.risk_of_bias.status === 'not_assessed',
+    JSON.stringify(importedStudy));
+  const importedExport = await page.evaluate(async () => {
+    const result = await window.LivingEvidence.invokeTool('export_document', { include_html: true }, { actor: 'human' });
+    return {
+      html: result.html,
+      artifact_sha256: result.artifact_sha256,
+      receipt_artifact_sha256: result.receipt.artifact_sha256,
+    };
+  });
+  check('self-contained export retains imported package/dataset/source-record identity',
+    importedExport.html.includes(stagedImport.package_sha256)
+      && importedExport.html.includes(IMPORT_PACKAGE.dataset.id)
+      && importedExport.html.includes(IMPORT_PACKAGE.studies[0].id)
+      && importedExport.html.includes(IMPORT_PACKAGE.source_artifact.sha256)
+      && importedExport.receipt_artifact_sha256 === importedExport.artifact_sha256
+      && importedExport.artifact_sha256 === `sha256:${sha256Hex(importedExport.html)}`,
+    importedExport.artifact_sha256);
+
+  // Leave fault-injection tests with the same deliberately empty starting point.
+  await page.click('#le-reset');
+  await page.waitForTimeout(400);
+  await boot();
+  check('second reset removes imported evidence and import registry',
+    (await call('get_document_overview', {})).evidence_base.k === 0
+      && (await call('get_data_manifest', {})).imported_packages.length === 0,
+    JSON.stringify(await call('get_data_manifest', {})));
+
   // ----------------------------------------- fault injection: corrupt snapshot
   console.log('\n# fault injection — a corrupt snapshot must not take the page down');
   await page.evaluate((k) => localStorage.setItem(k, '{"v":1,"approved":[{"yi":0.8,'), STORAGE_KEY);
@@ -463,8 +960,14 @@ try {
   await boot();
   check('page boots clean after unparseable JSON', await page.evaluate(() => !!window.LivingEvidence), '');
   check('corrupt snapshot yields a fresh empty workspace', (await page.textContent('[data-le-bind="k"]')) === '0');
-  check('corrupt snapshot discarded from storage',
-    await page.evaluate((k) => { const raw = localStorage.getItem(k); return !raw || JSON.parse(raw).v === 1; }, STORAGE_KEY));
+  check('corrupt snapshot discarded and replaced by a clean v2 snapshot',
+    await page.evaluate((k) => {
+      const raw = localStorage.getItem(k);
+      if (!raw) return true;
+      const saved = JSON.parse(raw);
+      return saved.v === 2 && saved.approved.length === 0 && saved.pending.length === 0
+        && saved.ledger.length === 1 && /^sha256:[0-9a-f]{64}$/.test(saved.ledger[0].entry_hash);
+    }, STORAGE_KEY));
   await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({
     v: 1, approved: [{ id: 'x', author: 'Broken', yi: 'not a number', vi: null }], claims: [], ledger: [], claimStatus: [],
   })), STORAGE_KEY);
@@ -481,6 +984,7 @@ try {
   server.kill();
   exportServer.kill();
   if (fs.existsSync(EXPORT_FILE)) fs.unlinkSync(EXPORT_FILE);
+  if (fs.existsSync(RECEIPT_FILE)) fs.unlinkSync(RECEIPT_FILE);
 }
 
 if (failures) { console.error(`\n${failures} FAILURE(S)`); process.exit(1); }

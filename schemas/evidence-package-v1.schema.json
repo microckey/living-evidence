@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://microckey.github.io/living-evidence/schemas/evidence-package-v1.schema.json",
+  "title": "Living Evidence SMD package v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "dataset", "studies"],
+  "properties": {
+    "schema_version": { "const": "living-evidence-smd-package/1" },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "effect_measure", "smd_variant", "effect_direction", "collection_frame"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "effect_measure": { "const": "SMD" },
+        "smd_variant": { "enum": ["Hedges_g", "Cohen_d", "Glass_delta", "other"] },
+        "smd_variant_detail": { "type": ["string", "null"] },
+        "effect_direction": { "type": "string", "minLength": 1 },
+        "collection_frame": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "smd_variant": { "const": "other" } }, "required": ["smd_variant"] },
+          "then": { "required": ["smd_variant_detail"], "properties": { "smd_variant_detail": { "type": "string", "minLength": 1 } } }
+        }
+      ]
+    },
+    "studies": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id", "author", "year", "yi", "vi", "weeks", "source", "quote",
+          "source_locator", "derivation", "study_design", "outcome", "timepoint",
+          "experiment_id", "risk_of_bias_status"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "author": { "type": "string", "minLength": 1 },
+          "year": { "type": "integer", "minimum": 1900, "maximum": 2100 },
+          "yi": { "type": "number", "minimum": -10, "maximum": 10 },
+          "vi": { "type": "number", "exclusiveMinimum": 0, "maximum": 10 },
+          "weeks": { "type": "number", "minimum": 0, "maximum": 500 },
+          "source": { "type": "string", "minLength": 1 },
+          "quote": { "type": "string", "minLength": 1 },
+          "source_url": { "type": ["string", "null"] },
+          "source_locator": { "type": "string", "minLength": 1 },
+          "doi": { "type": ["string", "null"] },
+          "derivation": { "type": "string", "minLength": 1 },
+          "setting": { "enum": ["group", "indiv", null] },
+          "tester": { "enum": ["aware", "blind", null] },
+          "n1i": { "type": ["integer", "null"], "minimum": 1 },
+          "n2i": { "type": ["integer", "null"], "minimum": 1 },
+          "study_design": { "type": "string", "minLength": 1 },
+          "outcome": { "type": "string", "minLength": 1 },
+          "timepoint": { "type": "string", "minLength": 1 },
+          "experiment_id": { "type": "string", "minLength": 1 },
+          "record_role": { "type": ["string", "null"] },
+          "risk_of_bias_status": { "enum": ["low", "some_concerns", "high", "not_assessed"] },
+          "risk_of_bias_instrument": { "type": ["string", "null"] },
+          "risk_of_bias_assessor": { "type": ["string", "null"] },
+          "risk_of_bias_date": { "type": ["string", "null"], "format": "date" },
+          "risk_of_bias_source": { "type": ["string", "null"] },
+          "risk_of_bias_overall_rationale": { "type": ["string", "null"] },
+          "risk_of_bias_domains": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["domain", "judgment", "rationale"],
+              "properties": {
+                "domain": { "type": "string", "minLength": 1 },
+                "judgment": { "enum": ["low", "some_concerns", "high", "unclear", "not_applicable"] },
+                "rationale": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "risk_of_bias_status": { "const": "not_assessed" } }, "required": ["risk_of_bias_status"] },
+            "then": {
+              "properties": {
+                "risk_of_bias_instrument": { "type": ["null"] },
+                "risk_of_bias_assessor": { "type": ["null"] },
+                "risk_of_bias_date": { "type": ["null"] },
+                "risk_of_bias_source": { "type": ["null"] },
+                "risk_of_bias_overall_rationale": { "type": ["null"] },
+                "risk_of_bias_domains": { "maxItems": 0 }
+              }
+            },
+            "else": {
+              "required": ["risk_of_bias_instrument", "risk_of_bias_assessor", "risk_of_bias_date", "risk_of_bias_source", "risk_of_bias_overall_rationale", "risk_of_bias_domains"],
+              "properties": {
+                "risk_of_bias_instrument": { "type": "string", "minLength": 1 },
+                "risk_of_bias_assessor": { "type": "string", "minLength": 1 },
+                "risk_of_bias_date": { "type": "string", "format": "date" },
+                "risk_of_bias_source": { "type": "string", "minLength": 1 },
+                "risk_of_bias_overall_rationale": { "type": "string", "minLength": 1 },
+                "risk_of_bias_domains": { "minItems": 1 }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "claims": { "type": "array" },
+    "source_artifact": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["filename", "media_type", "sha256"],
+      "properties": {
+        "filename": { "type": "string", "minLength": 1 },
+        "media_type": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

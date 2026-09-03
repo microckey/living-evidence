@@ -43,19 +43,30 @@
   footer { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--le-border); color: var(--le-muted); font-size: 0.85em; }
   .refs { font-size: 0.85em; color: var(--le-muted); }
   .refs p { margin: 0.4em 0; padding-left: 1.4em; text-indent: -1.4em; }
+  .le-benchmark { margin: 2.4rem 0; padding: 1rem 1.1rem; border: 1px solid var(--le-border); border-left: 4px solid var(--le-accent); border-radius: 12px; background: var(--le-card); }
+  .le-benchmark h2 { margin-top: 0; }
+  .le-benchmark-meta { font-size: 0.8em; color: var(--le-muted); overflow-wrap: anywhere; }
+  .le-benchmark-prompt { max-height: 16rem; overflow: auto; padding: 0.8em; border-radius: 8px; background: var(--le-code); white-space: pre-wrap; font: 0.76em/1.45 ui-monospace, "SF Mono", Menlo, monospace; }
+  .le-benchmark-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 1rem; }
+  .le-benchmark-card { border: 1px solid var(--le-border); border-radius: 10px; padding: 0.8rem; }
+  .le-benchmark-card h3 { margin-top: 0; }
+  .le-benchmark-answer { width: 100%; min-height: 9rem; box-sizing: border-box; resize: vertical; padding: 0.65em; border: 1px solid var(--le-border); border-radius: 8px; background: var(--le-paper); color: var(--le-ink); font: 0.76em/1.4 ui-monospace, "SF Mono", Menlo, monospace; }
+  .le-benchmark-result { margin-top: 0.55em; font-size: 0.82em; color: var(--le-ink); }
+  .le-benchmark-error { color: var(--le-bad); }
+  @media (max-width: 700px) { .le-benchmark-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 <main>
   <header class="doc">
     <h1>Do Teacher Expectations Raise Students’ IQ?</h1>
-    <p class="subtitle">A living meta-analysis of the Pygmalion effect — 19 experiments, recomputed in your browser, open to cross-examination.</p>
+    <p class="subtitle">A living meta-analysis of the Pygmalion effect — 18 experiments represented by 19 effect-size records, recomputed in your browser.</p>
     <div class="le-status" id="le-status"><span class="le-status-dot le-off"></span><span>Initializing agent interface…</span></div>
   </header>
 
   <div class="format-note">
     <strong>This is a Living Evidence document.</strong> The statistics in this article are not typeset into the text —
-    they are computed live, in your browser, from the study-level data embedded in this page. If you are reading
+    they are computed live, in your browser, from the effect-size records embedded in this page. If you are reading
     with an AI agent in a <a href="https://developer.chrome.com/docs/ai/webmcp">WebMCP</a>-enabled browser, your agent has been
     handed tools to re-run, stress-test, and extend every analysis here. Whatever it does is rendered back into this
     document — in the <a href="#workbench">Reader’s Workbench</a> and the <a href="#ledger">audit ledger</a> — so you
@@ -73,8 +84,8 @@
     <div>
       <h3>If you are an agent</h3>
       <p>Call <code>get_document_overview</code> first. Every number you cite from this document must come from its
-      tools, not from parsing the prose — the page computes, you judge. Test claims with <code>evaluate_claim</code>;
-      verdict badges will appear in the text. You may <code>propose_study</code>, but only the human can approve it.</p>
+      tools, not from parsing the prose. The page computes; its registered rule classifies; you and the human interpret.
+      Run <code>evaluate_claim</code>; a rule-outcome badge appears in the text. You may <code>propose_study</code>, but only the human can approve it.</p>
     </div>
   </div>
 
@@ -87,11 +98,12 @@
   smarter</span>, entered textbooks, teacher training, and popular culture.</p>
 
   <p>What entered the textbooks less often: replications began almost immediately, and most of them failed. By 1984,
-  Raudenbush could assemble nineteen experiments that all used the same design — deceive teachers about randomly chosen
-  pupils, then measure IQ. This document carries all nineteen as data, not citations.</p>
+  Raudenbush had assembled 18 experiments using the same broad design — deceive teachers about randomly chosen pupils,
+  then measure IQ. This page carries 19 effect-size records because the Pellegrini &amp; Hicks experiment contributes
+  separate aware-tester and blind-tester records.</p>
 
   <h2>The evidence base</h2>
-  <p class="stat-line">Across <strong data-le-bind="k">19</strong> studies, the pooled random-effects estimate of the
+  <p class="stat-line">Across <strong data-le-bind="k">19</strong> effect-size records from 18 experiments, the pooled random-effects estimate of the
   expectancy effect is <strong data-le-bind="estimate">…</strong> standard deviations,
   95%&nbsp;CI <strong data-le-bind="ci">…</strong>, <em>p</em>&nbsp;= <strong data-le-bind="p">…</strong>.
   Between-study heterogeneity is moderate (I²&nbsp;= <span data-le-bind="I2">…</span>,
@@ -105,21 +117,25 @@
   </figure>
 
   <details>
-    <summary>Study-level data (the table your agent reads through <code>get_studies</code>)</summary>
+    <summary>Effect-size records (the table your agent reads through <code>get_studies</code>)</summary>
     <div class="table-scroll">
       <table class="studies">
-        <thead><tr><th>Study</th><th>Year</th><th>Prior contact (weeks)</th><th>Setting</th><th>Tester</th><th>n₁</th><th>n₂</th><th>SMD</th><th>Var</th></tr></thead>
+        <thead><tr><th>Record</th><th>Experiment</th><th>Year</th><th>Prior contact</th><th>Tester</th><th>SMD</th><th>Var</th><th>Source status</th><th>RoB</th></tr></thead>
         <tbody id="study-table-body"></tbody>
       </table>
     </div>
-    <p class="refs">Data transcribed from the open <a href="https://wviechtb.github.io/metadat/reference/dat.raudenbush1985.html">metadat</a>
-    distribution of Raudenbush (1984) / Raudenbush &amp; Bryk (1985). “Prior contact” is how many weeks the teachers had
-    already known their pupils before researchers tried to plant an expectation.</p>
+    <p class="refs"><strong>Traceability status:</strong> all 19 yi/vi records are secondary-dataset transcriptions with
+    row locators; primary reports checked 0/19; effect-size derivations checked 0/19; structured risk of bias assessed
+    0/19. The page reproduces calculations over these values; it does not validate their extraction or study design.
+    Source: open <a href="https://wviechtb.github.io/metadat/reference/dat.raudenbush1985.html">metadat</a> distribution;
+    synthesis DOI <a href="https://doi.org/10.1037/0022-0663.76.1.85">10.1037/0022-0663.76.1.85</a>.</p>
+    <p class="refs"><strong>Unit warning:</strong> the reference fit reproduces the historical 19-row analysis and does
+    not model covariance between the two Pellegrini &amp; Hicks condition records.</p>
   </details>
 
   <h2>What the evidence actually says</h2>
   <p>Read as one undifferentiated pile, the literature is deflating:
-  <span class="le-claim" data-claim="c-overall">pooled across all studies, the average expectancy effect is small and
+  <span class="le-claim" data-claim="c-overall">pooled across all effect-size records, the average expectancy effect is small and
   not statistically significant</span>. If the Pygmalion effect were the robust, general phenomenon of popular
   telling, this is not the forest plot it would leave behind.</p>
 
@@ -132,18 +148,52 @@
   the effect reappears: <span class="le-claim" data-claim="c-window">in studies where teachers had known their pupils
   for at most one week, the expectancy induction produced a significant IQ gain</span>.</p>
 
-  <p>So the honest one-line summary is neither “Pygmalion is real” nor “Pygmalion failed to replicate.” It is:
-  <em>expectations moved measured IQ only in the narrow window before teachers had formed their own.</em> A claim about
-  the power of belief turns out to be a claim about the timing of belief.</p>
+  <p>A narrow descriptive summary is neither “Pygmalion is real” nor “Pygmalion failed to replicate.” In this
+  historical, row-wise synthesis, larger estimates were associated with at most one week of prior contact under the
+  authored subgroup and capped-linear analyses. This does not establish a causal window.</p>
 
   <h2>How solid is this?</h2>
   <p>Two robustness checks are built into this document. First,
-  <span class="le-claim" data-claim="c-robust">no single study drives these conclusions</span> — remove any one
-  experiment and the overall picture stands. Second,
+  <span class="le-claim" data-claim="c-robust">no single effect-size record changes whether the pooled estimate crosses p &lt; 0.05</span> — this is a narrow
+  leave-one-record-out threshold check, not a leave-one-experiment-out analysis or proof that the result is stable in magnitude. Second,
   <span class="le-claim" data-claim="c-bias">the evidence base shows no signs of publication bias</span> — though your
-  agent may have opinions about how confidently that can be said. Every claim above carries a deterministic check;
-  none of them has been evaluated yet on your copy of this document. That is deliberate. <strong>Don’t take this
+  agent may have opinions about how confidently that can be said. Every claim above carries a document-registered rule;
+  none has run yet on your copy. A badge reports only whether that authored rule passed, failed, or was inconclusive —
+  never scientific truth, validity, risk of bias, or evidence quality. That is deliberate. <strong>Don’t take this
   article’s word for its own claims — have them tested.</strong></p>
+
+  <section class="le-benchmark" id="le-comparison-eval" aria-labelledby="benchmark-title">
+    <h2 id="benchmark-title">PDF vs WebMCP: a testable comparison</h2>
+    <p data-benchmark-status><strong>No runs recorded — this page makes no claim that WebMCP outperforms PDF.</strong>
+    Use the same model, settings and prompt in fresh sessions, then paste the two JSON answers below. Scoring happens
+    only in this browser and never enters the scientific audit ledger.</p>
+    <p><a href="docs/benchmark-baseline.pdf">Download the frozen PDF baseline</a> ·
+    <a href="docs/BENCHMARK.md">read the protocol</a></p>
+    <p class="le-benchmark-meta">Baseline 2026-09-04.v1 · SHA-256
+    <code data-benchmark-hash>loading…</code>. The PDF and this page share the same 19 numeric records. This evaluates
+    three specified tasks on one corpus; it does not establish general accuracy, speed, or scientific validity.</p>
+    <details>
+      <summary>Common prompt for both conditions</summary>
+      <pre class="le-benchmark-prompt" data-benchmark-prompt></pre>
+      <button class="le-btn" type="button" data-benchmark-copy>Copy prompt</button>
+    </details>
+    <div class="le-benchmark-grid">
+      <div class="le-benchmark-card">
+        <h3>Ordinary PDF + agent</h3>
+        <p class="refs">Attach only the frozen PDF in a fresh session.</p>
+        <textarea class="le-benchmark-answer" data-benchmark-answer="pdf" aria-label="PDF condition JSON answer" placeholder="Paste the agent’s JSON answer"></textarea>
+        <button class="le-btn" type="button" data-benchmark-score="pdf">Score PDF answer locally</button>
+        <div class="le-benchmark-result" data-benchmark-result="pdf" aria-live="polite"></div>
+      </div>
+      <div class="le-benchmark-card">
+        <h3>Living Evidence + WebMCP agent</h3>
+        <p class="refs">Open this page in a fresh WebMCP-enabled session.</p>
+        <textarea class="le-benchmark-answer" data-benchmark-answer="webmcp" aria-label="WebMCP condition JSON answer" placeholder="Paste the agent’s JSON answer"></textarea>
+        <button class="le-btn" type="button" data-benchmark-score="webmcp">Score WebMCP answer locally</button>
+        <div class="le-benchmark-result" data-benchmark-result="webmcp" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
 
   <h2 id="workbench">Reader’s Workbench</h2>
   <section>
@@ -160,9 +210,17 @@
   </section>
 
   <h2 id="ledger">Audit ledger</h2>
-  <p class="refs">Append-only record of everything done to this document in your session — by agents and by humans.
-  Agents can read it back through <code>get_audit_log</code>.</p>
+  <p class="refs">A device-persistent SHA-256 hash chain of analyses, registered-rule outcomes and decisions. It survives
+  reloads in this browser. The chain detects edits and reordering; it is not a trusted timestamp or author identity.</p>
   <ol class="le-ledger" id="le-ledger"></ol>
+
+  <h2>Reproducibility receipt</h2>
+  <p class="refs">Create a signed receipt for the current scientific-state hash and audit-chain head. The signing key
+  is generated for this page load and rotates on reload; each receipt is individually self-signed. A published receipt
+  fixes only the audit prefix it covers, while later reader actions form a local suffix. Save the detached artifact
+  receipt and pin its fingerprint in an external archive or repository release before using it as authorship evidence.</p>
+  <div class="le-integrity" id="le-reproducibility"></div>
+  <button class="le-btn le-clear-session" id="le-reset" type="button">Clear this device-local session</button>
 
   <h2 id="console">Tool console</h2>
   <details>
@@ -176,9 +234,9 @@
   <p class="refs">Pooling uses a random-effects model with REML estimation of τ² (DerSimonian–Laird and fixed-effect
   available through the tools); heterogeneity is reported as Cochran’s Q and I²; the moderator model is a mixed-effects
   meta-regression on prior contact truncated at three weeks, following Raudenbush (1984); publication-bias diagnostics
-  use Egger’s regression test. The engine is dependency-free JavaScript running in this page, validated against
-  R’s <code>metafor</code> package output for this dataset (all reference values reproduced to published precision;
-  see the test suite in the repository). Statistical caveat: subgroup and moderator analyses here are observational
+  use Egger’s regression test. The engine is dependency-free JavaScript running in this page; selected numerical
+  outputs for this fixture reproduce R <code>metafor</code> reference values to the tested precision. That is a software
+  reproduction check, not validation of the extracted data, model assumptions, or scientific conclusion. Statistical caveat: subgroup and moderator analyses here are observational
   comparisons across randomized experiments and can be confounded by other study features.</p>
 
   <h2>References</h2>
@@ -195,13 +253,13 @@
   </div>
 
   <footer>
-    <p><strong>Living Evidence v0.1</strong> — a document format for the age of machine readers.
+    <p><strong>Living Evidence v0.2</strong> — an aggregate-SMD document format for the age of machine readers.
     Prose for humans, tools for agents, one shared page. Source, format spec, and authoring template:
     <a href="https://github.com/microckey/living-evidence">github.com/microckey/living-evidence</a> (MIT).
-    Study-level data from the open metadat distribution, © the original authors; this document’s prose and code are
+    Effect-size records from the open metadat distribution, © the original authors; this document’s prose and code are
     original.</p>
-    <p>For a question that doesn't fit the SMD genre, see the <a href="board.html">Evidence Board</a> — the same
-    propose→approve rules generalized to hypotheses, mechanisms, claims and open questions.</p>
+    <p><strong>Experimental appendix:</strong> the <a href="board.html">unverified conversation-ingestion sandbox</a>
+    is not part of this meta-analysis, its evidence base, or the exemplar’s numerical and software verification.</p>
     <p><noscript>This document requires JavaScript: its statistics are computed, not typeset.</noscript></p>
   </footer>
 </main>
@@ -215,13 +273,15 @@
   const tbody = document.getElementById('study-table-body');
   for (const s of DATASET.studies) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${s.author}</td><td>${s.year}</td><td>${s.weeks}</td><td>${s.setting}</td><td>${s.tester}</td>
-      <td>${s.n1i}</td><td>${s.n2i}</td><td>${s.yi.toFixed(2)}</td><td>${s.vi.toFixed(4)}</td>`;
+    const sourceStatus = s.provenance?.verification_status || 'unverified';
+    tr.innerHTML = `<td>${s.id}: ${s.author}</td><td>${s.experiment_id}</td><td>${s.year}</td><td>${s.weeks} weeks</td><td>${s.tester}</td>
+      <td>${s.yi.toFixed(2)}</td><td>${s.vi.toFixed(4)}</td><td>${sourceStatus}</td><td>${s.risk_of_bias?.status || 'not_assessed'}</td>`;
     tbody.appendChild(tr);
   }
 
-  initLivingEvidence({
+  const livingEvidence = initLivingEvidence({
     title: 'Do Teacher Expectations Raise Students’ IQ? A living meta-analysis of the Pygmalion effect',
+    storageKey: 'le-exemplar-v2',
     hypothesis: 'Experimentally induced teacher expectations raise pupils’ measured IQ.',
     dataset: DATASET,
     subgroupFields: {
@@ -236,6 +296,14 @@
     // same six claims, and both pages must read byte-identical rules.
     claims: CLAIMS,
   });
+
+  import('./lib/comparison-eval.js')
+    .then(({ initComparisonEval }) => initComparisonEval({ studies: DATASET.studies }))
+    .catch((error) => {
+      const status = document.querySelector('[data-benchmark-status]');
+      if (status) status.textContent = `Comparison scorer unavailable: ${error.message}`;
+      console.warn('[living-evidence] comparison scorer unavailable:', error);
+    });
 </script>
 </body>
 </html>
