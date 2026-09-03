@@ -191,7 +191,7 @@ just a static folder, an "arXiv overlay" of cross-examinable documents needs no
 platform at all — just authors. This is not a new PDF; it is the first page of
 an executable layer for science.
 
-**Try it live:** ⟨deploy URL⟩ · **Code (MIT):** ⟨repo URL⟩
+**Try it live:** https://microckey.github.io/living-evidence/ (documents: [exemplar](https://microckey.github.io/living-evidence/) · [workspace](https://microckey.github.io/living-evidence/workspace.html) · [atlas](https://microckey.github.io/living-evidence/atlas.html) · [board](https://microckey.github.io/living-evidence/board.html)) · **Code (MIT):** https://github.com/microckey/living-evidence
 
 ---
 

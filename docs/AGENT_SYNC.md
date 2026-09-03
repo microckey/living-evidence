@@ -17,6 +17,25 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
+## Status (2026-09-03 20:5x JST DEPLOYED — CURRENT; ~8h to deadline)
+
+- Codex could not deploy: usage limit exhausted until Sep 7 (after deadline),
+  two attempts burned with no output. Fable deployed instead under the
+  standing deploy intent: **public GitHub repo microckey/living-evidence
+  (push of main) + GitHub Pages (branch main, root, HTTPS enforced)**.
+- **LIVE: https://microckey.github.io/living-evidence/** — all four pages
+  verified live (200s; Playwright smoke: tools 12/15/10/11 registered,
+  overview tools respond, zero page errors). Devpost public-repo+license
+  requirement satisfied by the same push (LICENSE MIT at root).
+- SUBMISSION 'Try it live' placeholders filled (root + per-page links + repo).
+- REMAINING (user-only, before 2026-09-03 13:00 PDT = 09-04 05:00 JST):
+  1) ChatGPT desktop built-in browser test on the LIVE URL (Site tools should
+     list the tools; ask "Cross-examine this document's claims.")
+  2) record video (script in SUBMISSION.md, target <=2:50), upload to YouTube
+     public WITH AUDIO
+  3) Devpost form: paste text, resolve remaining ⟨…⟩ in the video beat only,
+     submit. grep ⟨ before pasting.
+
 ## Status (2026-09-01 Board in submission + Codex round 2 — CURRENT)
 
 - **Board included in the submission** (user decision): README + SUBMISSION
