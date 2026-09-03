@@ -32,9 +32,9 @@ Say "cross-examine", show ✗ challenged badge on the textbook claim in every de
 - The public YouTube upload is playable, not private or unlisted, and its local
   master is 170.000 seconds with H.264 video and mono AAC narration. The narration
   and burned captions explain what was built and how WebMCP is used.
-- The unauthenticated GitHub repository is public at the pushed `f5f6ccc` head;
-  GitHub detects the root MIT license and the README explains the WebMCP fit and
-  human/agent collaboration.
+- The unauthenticated GitHub repository is public. The audited application commit
+  was `f5f6ccc`, followed by this docs-only audit record; GitHub detects the root
+  MIT license and the README explains the WebMCP fit and human/agent collaboration.
 - Remaining user-only gates: confirm any Devpost teammate invitations (or treat as
   N/A for a solo entry), verify the pasted form fields, and click Submit. The
   official-rules body still says September 3 at 1:00 pm PDT even though the page
