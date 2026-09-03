@@ -17,6 +17,18 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
+## Status (2026-09-04 02:3x JST — v0.2 PUBLIC)
+
+- Sites v0.2 is deployed at <https://living-evidence.doralemon.chatgpt.site/>
+  with `public` access. An unauthenticated HTTP check returned 200 and the live
+  page exposed the revised 15-tool WebMCP surface.
+- The same validated implementation was pushed to public GitHub `main` and the
+  GitHub Pages deployment completed successfully. The live mirror at
+  <https://microckey.github.io/living-evidence/> shows the v0.2 19-record /
+  18-experiment disclosure.
+- Local `main` and `origin/main` were synchronized after publication. Remaining
+  deadline work is the demo video and Devpost form, not engineering or hosting.
+
 ## Status (2026-09-04 — v0.2 scientific-integrity release candidate)
 
 - Canonical UI/API outcomes are now registered-rule `passed / failed /
