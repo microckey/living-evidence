@@ -69,6 +69,12 @@ scientific conclusion.
 
 ## Try it
 
+Start with **Run the headline’s registered rule** at the top of the exemplar.
+The result appears immediately, with human/tool-client attribution; **Inspect
+source gaps** opens the current manifest. These are manual shortcuts over the
+same handlers, not a simulated AI conversation. Native tool calls also update
+the quick-start result.
+
 Open the exemplar with a WebMCP-capable browser and ask:
 
 > Cross-examine this document's claims. Begin with `get_document_overview`,
@@ -78,16 +84,47 @@ Without an agent, use the page's Tool console. To author a document, open the
 workspace and follow `docs/IMPORTING.md`; export is blocked while any proposal
 still awaits human review.
 
+The workspace also offers three explicitly synthetic sample records. They are
+staged in an empty workspace, never automatically approved. Review each card;
+the forest plot appears after the second approval. The sample is not a second
+scientific corpus or evidence of generalization.
+
 ## Verify locally
 
 ```bash
+pnpm install
+pnpm exec playwright install chromium
 pnpm test
 pnpm e2e
 pnpm e2e:workspace
 pnpm e2e:atlas
 pnpm e2e:board
+pnpm e2e:onboarding
 pnpm build
 ```
+
+Use Node 22.13+ and Python 3 (for the regression suites' local HTTP server).
+The pinned local Playwright package replaces the original developer-specific
+absolute import path.
+
+### Native WebMCP, separately from handler regression tests
+
+Chrome 152 was tested through its **native DevTools WebMCP domain**, discovering
+15/18/10/11 tools across the four surfaces and invoking each overview. A native
+`evaluate_claim` changed the headline badge and the shared-page agent ledger.
+This is a browser-client integration test, not evidence of autonomous agent
+reasoning. ChatGPT's in-app agent has not been tested.
+
+The dependency-free Node harness launches an isolated temporary Chrome profile:
+
+```bash
+node verify/native-webmcp.mjs
+node verify/native-webmcp.mjs --url https://living-evidence.doralemon.chatgpt.site/
+```
+
+See [native test details](docs/NATIVE-WEBMCP.md) for browser paths, flags, exact
+checks and limitations. This test never substitutes direct JavaScript handler
+calls or a mock registry for native WebMCP.
 
 Verify an exported document and detached receipt:
 

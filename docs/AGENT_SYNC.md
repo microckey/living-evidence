@@ -7,7 +7,8 @@
 ## Project
 
 WebMCP Challenge 2026 entry (https://webmcp.devpost.com/ — deadline
-**2026-09-03 13:00 PDT** = 2026-09-04 05:00 JST; winners 9/23).
+**extended to 2026-09-04 01:00 PDT** = 2026-09-04 17:00 JST; winners 9/23).
+Official extension: https://webmcp.devpost.com/updates/46227-deadline-extension-12-more-hours
 Concept: **Living Evidence — documents your AI can cross-examine.**
 Format (spec + runtime + template) plus one exemplar: a living meta-analysis of
 the Pygmalion effect (19 effect-size records representing 18 experiments).
@@ -15,7 +16,55 @@ the Pygmalion effect (19 effect-size records representing 18 experiments).
 Judging criteria targeted: WebMCP Leverage / Execution / Potential Impact /
 Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
-Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
+Say "cross-examine", show the registered-rule-failed badge on the textbook claim.
+
+## Status (2026-09-04 — extended-deadline improvements, local release candidate)
+
+- The user reports that the Devpost entry is already submitted. The official
+  12-hour extension supersedes the earlier timing precaution below. Preserve
+  Submitted status when editing; freeze the submitted artifacts at 17:00 JST.
+- Added an above-the-fold quick start: human headline-rule execution, current
+  source-gap inspection, a copyable real-agent prompt, and Workspace/Atlas
+  navigation. Native WebMCP calls mirror into the same result panel. Actor
+  attribution and stale evidence versions remain visible; no auto-run on load.
+- Added a three-record synthetic CSV learning sample via the normal inert
+  importer. The shortcut refuses any existing hypothesis, claim, evidence,
+  proposal or import; rechecks after fetch; stages only; and requires individual
+  human approvals. Pending records still block export. Proposal UI now uses
+  neutral language rather than falsely attributing manual imports to an agent.
+- Added a dependency-free Node native-Chrome harness. The local run discovered
+  all 15/18/10/11 tools with schemas, invoked all four overviews, observed a
+  native headline check in the real badge/agent ledger/quick-start panel, and
+  rejected invalid claim input without ledger mutation. ChatGPT's in-app agent
+  is still untested; do not call the manual UI or scripted native client an
+  autonomous agent conversation.
+- Native metadata testing exposed Chrome 152's Latin-1 schema serialization
+  bug: Atlas `synthesize` registered and ran but CDP omitted its schema because
+  of `tau²` in a description. An isolated ASCII/Latin-1/Unicode experiment and
+  Chromium source confirmed it. Minimal fix: `tau^2`, with no math or contract
+  change. The new schema-presence assertion stays strict (red before, green
+  after). Cross-project memo recorded in html-game-verification.md.
+- Added onboarding regression tests (first-viewport action on desktop/mobile,
+  human/tool-client attribution, restored/stale state, source-panel reopen after
+  approval, synthetic sample isolation and approval/export gates). Independent
+  review found the closed-panel stale manifest and hypothesis-only sample gate
+  holes; both fixed with behavior checks.
+- Pinned Playwright 1.60.0 locally and removed developer-home absolute imports
+  from all four suites. README documents installation and Chromium download.
+- Unit, exemplar, workspace, Atlas, Board, onboarding and native Chrome suites
+  pass. Desktop/mobile quick-start screenshots were visually inspected.
+- English submission story and field-specific updates are prepared under the
+  parent workspace's deliverables directory. AI disclosure includes the
+  Claude-assisted work recorded in this log. Existing YouTube video is unchanged.
+- Public Sites remains active version 3. This candidate has NOT been deployed
+  or pushed to GitHub yet: explicit approval to publish publicly was requested
+  during the turn and is pending. Do not mistake local tests for deployed QA.
+- Devpost plugin was not found in the configured catalogs/current callable
+  tools. The official resources page provided its installation link, opened
+  for the user: https://chatgpt.com/plugins/plugin_asdk_app_6a330a7730c081919892632d5baaec58
+  Installation/authentication and submission edits have NOT been verified.
+  Await the user's connection and exact submitted-project URL; prepared text is
+  not proof that the form was changed. Do not withdraw/re-submit a duplicate.
 
 ## Status (2026-09-04 03:45 JST — final submission audit)
 

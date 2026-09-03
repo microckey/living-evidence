@@ -8,7 +8,7 @@
 //
 // Servers (both started here): 8511 serves the workspace, 8512 serves the exported
 // document, always on 127.0.0.1. Playwright comes from the absolute path below.
-import { createRequire } from 'module';
+import { chromium } from 'playwright';
 import { execFileSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -16,8 +16,6 @@ import path from 'path';
 import { metaAnalyze } from '../lib/meta-stats.js';
 import { canonicalStringify, sha256Hex } from '../lib/integrity.js';
 
-const require = createRequire(import.meta.url);
-const { chromium } = require('/Users/hirokisugimoto/tennis-checker/node_modules/playwright');
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 // Dedicated ports keep this suite isolated when the exemplar E2E runs in parallel.

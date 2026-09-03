@@ -9,6 +9,14 @@ Open `workspace.html`, choose a `.csv`, `.json`, `.qmd`, or `.ipynb` file under
 the browser. Parsing never executes notebook cells, evaluates formulas, follows
 URLs, or adds records automatically.
 
+For a first walkthrough, use **Try 3 synthetic sample records** in an empty
+workspace, or download [the complete sample CSV](examples/synthetic-evidence.csv).
+These numbers are invented for learning the interface, not research evidence.
+The button stages three cards but approves none; approve individually and the
+forest plot appears after the second approval. Pending cards block export.
+The sample shortcut refuses nonempty workspaces to avoid silently mixing demo
+records with research. Export anything you need before choosing to reset.
+
 ## CSV contract
 
 Required UTF-8 headers:

@@ -28,6 +28,15 @@
   @media (max-width: 620px) { .howto { grid-template-columns: 1fr; } }
   .howto h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
   .howto p { margin: 0.3rem 0; }
+  .quickstart { border: 1px solid var(--le-border); border-top: 4px solid var(--le-accent); border-radius: 12px; padding: 1rem 1.1rem; background: var(--le-card); margin: 1.2rem 0; font: 0.9rem/1.55 system-ui, sans-serif; }
+  .quickstart h2 { margin: 0 0 .4rem; font: 650 1.2rem/1.3 system-ui, sans-serif; }
+  .quickstart p { margin: .5rem 0; }
+  .quickstart-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; }
+  .quickstart .le-btn { white-space: normal; }
+  .quickstart-result { border-left: 3px solid var(--le-accent); padding: .6rem .8rem; background: var(--le-paper); }
+  .quickstart small { display: block; color: var(--le-muted); }
+  .quickstart pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 18rem; overflow: auto; font-size: .8rem; }
+  .quickstart textarea { width: 100%; box-sizing: border-box; min-height: 8rem; color: var(--le-ink); background: var(--le-paper); border: 1px solid var(--le-border); border-radius: 6px; padding: .6rem; font: inherit; }
   .stat-line { font-variant-numeric: tabular-nums; }
   figure.main { margin: 1.4rem 0; }
   details { margin: 1rem 0; border: 1px solid var(--le-border); border-radius: 10px; background: var(--le-card); padding: 0.6rem 1rem; }
@@ -63,6 +72,36 @@
     <p class="subtitle">A living meta-analysis of the Pygmalion effect — 18 experiments represented by 19 effect-size records, recomputed in your browser.</p>
     <div class="le-status" id="le-status"><span class="le-status-dot le-off"></span><span>Initializing agent interface…</span></div>
   </header>
+
+  <section class="quickstart" id="quickstart" aria-labelledby="quickstart-title">
+    <h2 id="quickstart-title">Cross-examine the headline in 30 seconds</h2>
+    <p>A paper gives an agent a claim. This page also gives it the exact rule, the data, and a way to rerun the calculation.</p>
+    <div class="quickstart-actions">
+      <button class="le-btn" type="button" data-quick-check disabled>Run the headline’s registered rule</button>
+      <button class="le-btn" type="button" data-quick-provenance disabled>Inspect source gaps</button>
+      <a class="le-btn" href="#workbench">See the shared workbench</a>
+    </div>
+    <div class="quickstart-result" aria-live="polite" aria-atomic="true">
+      <strong data-quick-outcome>Not run on this device</strong>
+      <p data-quick-reason>Run the check yourself, or ask your WebMCP agent to do it. Both update this page.</p>
+      <small data-quick-attribution>Buttons are human actions, not an agent simulation.</small>
+    </div>
+    <p><small>A passed or failed rule is not a scientific truth rating. The historical fit uses 19 records from 18 experiments and does not model their shared-experiment covariance.</small></p>
+    <details data-quick-manifest hidden>
+      <summary>Source checks and limitations — current evidence base</summary>
+      <p data-quick-quality></p>
+      <pre data-quick-manifest-json></pre>
+    </details>
+    <details>
+      <summary>Try the real WebMCP agent workflow</summary>
+      <p>Open this page in ChatGPT’s in-app browser, or Chrome with WebMCP enabled. Give your agent this prompt:</p>
+      <textarea data-quick-prompt readonly aria-label="Prompt for your WebMCP agent">Call get_document_overview, then evaluate_claim with claim_id "c-textbook". Explain the registered rule and its result without treating it as a truth judgment. Inspect get_data_manifest and report the provenance gaps and the 19-record / 18-experiment dependence warning. Do not add or approve studies.</textarea>
+      <button class="le-btn" type="button" data-quick-copy>Copy agent prompt</button>
+      <small data-quick-copy-status aria-live="polite"></small>
+      <p><a href="docs/NATIVE-WEBMCP.md">Native Chrome test and reproduction instructions</a> · <a href="#console">Manual Tool console fallback</a></p>
+    </details>
+    <p><a href="workspace.html">Author a document</a> · <a href="docs/IMPORTING.md">Import a sample evidence package</a> · <a href="atlas.html">Explore the evidence map</a></p>
+  </section>
 
   <div class="format-note">
     <strong>This is a Living Evidence document.</strong> The statistics in this article are not typeset into the text —
@@ -295,6 +334,11 @@
     // data/pygmalion-claims.js because the evidence map (atlas.html) argues about the
     // same six claims, and both pages must read byte-identical rules.
     claims: CLAIMS,
+  });
+
+  import('./lib/quickstart.js').then(({ initQuickstart }) => initQuickstart(livingEvidence)).catch((error) => {
+    document.querySelector('[data-quick-reason]').textContent = 'Quick start unavailable. Use the Tool console below.';
+    console.warn('[living-evidence] quick start unavailable:', error);
   });
 
   import('./lib/comparison-eval.js')

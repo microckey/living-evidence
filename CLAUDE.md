@@ -1,6 +1,9 @@
 # living-evidence — session ritual
 
-WebMCP Challenge 2026 entry (deadline **2026-09-03 13:00 PDT** = 9/4 05:00 JST).
+WebMCP Challenge 2026 entry (extended deadline **2026-09-04 01:00 PDT** = 9/4 17:00 JST).
+Official extension: https://webmcp.devpost.com/updates/46227-deadline-extension-12-more-hours
+The user reports the entry is submitted. Preserve that state while updating it.
+Freeze the submitted repo, live site, video and entry at the extended cutoff.
 "Living Evidence" = documents your AI can cross-examine. Format spec + exemplar
 living meta-analysis (Pygmalion effect).
 
@@ -9,8 +12,8 @@ Every session, in order:
 1. Read `docs/AGENT_SYNC.md` in full (protocol in its header; update before stopping).
 2. Read `docs/SPEC.md` if touching the format; `README.md` if touching positioning.
 3. Before delivery/commit: `node verify/stats.test.mjs && node verify/e2e.mjs`
-   must be green. E2E uses Playwright from `~/tennis-checker/node_modules/playwright`
-   (absolute path, no install) and serves on **port 8501** via
+   must be green. E2E uses the pinned repository-local Playwright dev dependency
+   (`pnpm install && pnpm exec playwright install chromium`) and serves on **port 8501** via
    `python3 -m http.server 8501 --bind 127.0.0.1` (always 127.0.0.1, never localhost).
 
 Rules that bit us elsewhere (from ~/.claude/playbooks/html-game-verification.md):

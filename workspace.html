@@ -97,6 +97,11 @@
     status. See the linked schema/producer guide for the exact header. Import validates the whole file first, then
     stages every row for separate human approval; approval accepts a supplied extraction, not its scientific truth.</p>
     <input id="le-import-file" type="file" accept=".csv,.json,.qmd,.ipynb,text/csv,application/json">
+    <p><button class="le-btn" type="button" id="le-load-sample">Try 3 synthetic sample records</button> ·
+    <a href="docs/examples/synthetic-evidence.csv" download>Download sample CSV</a></p>
+    <p class="refs">Learning example only: invented numbers, not publications or scientific evidence. Stages three
+    review cards in an empty workspace; it does not approve them or change your hypothesis. Review and approve
+    records individually to see a forest plot after the second approval. Never mix this sample with real research.</p>
     <p class="le-import-status" id="le-import-status">No package selected. Maximum 1 MiB / 100 records. See <a href="docs/IMPORTING.md">producer recipes</a>.</p>
   </div>
 
@@ -114,7 +119,7 @@
 
   <section id="pending-section">
     <h2>Proposed evidence records awaiting your approval</h2>
-    <p class="refs">An agent proposed these. They are not in any analysis yet.</p>
+    <p class="refs">Proposed or imported records. They are not in any analysis yet; approval is not source verification.</p>
     <div id="le-pending"></div>
   </section>
 
@@ -192,6 +197,16 @@
 
   const importInput = document.getElementById('le-import-file');
   const importStatus = document.getElementById('le-import-status');
+  function stageBytes(bytes, filename, mediaType) {
+    if (bytes.byteLength > 1024 * 1024) throw new Error('import exceeds the 1 MiB browser limit');
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const pkg = parseEvidenceContent(text, filename, {
+      sourceArtifact: { filename, media_type: mediaType, sha256: `sha256:${sha256Hex(bytes)}` },
+    });
+    const result = api.stageEvidencePackage(pkg, { actor: 'human' });
+    importStatus.textContent = `${result.staged_records} record(s) staged. Evidence k has not changed; review each approval card below. Package ${result.package_sha256.slice(0, 24)}…`;
+    return result;
+  }
   importInput.addEventListener('change', async () => {
     const file = importInput.files?.[0];
     if (!file) return;
@@ -199,21 +214,41 @@
     importStatus.textContent = `Checking ${file.name}…`;
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
-      if (bytes.byteLength > 1024 * 1024) throw new Error('import exceeds the 1 MiB browser limit');
-      const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
       const extension = file.name.toLowerCase().split('.').pop();
       const mediaType = file.type || ({ csv: 'text/csv', qmd: 'text/markdown', ipynb: 'application/x-ipynb+json' }[extension] || 'application/json');
-      const pkg = parseEvidenceContent(text, file.name, {
-        sourceArtifact: { filename: file.name, media_type: mediaType, sha256: `sha256:${sha256Hex(bytes)}` },
-      });
-      const result = api.stageEvidencePackage(pkg, { actor: 'human' });
-      importStatus.textContent = `${result.staged_records} record(s) staged. Evidence k has not changed; review each approval card below. Package ${result.package_sha256.slice(0, 24)}…`;
+      stageBytes(bytes, file.name, mediaType);
     } catch (error) {
       importStatus.classList.add('le-import-error');
       importStatus.textContent = `Nothing imported: ${error.message}`;
     } finally {
       importInput.value = '';
     }
+  });
+  const sampleButton = document.getElementById('le-load-sample');
+  sampleButton.addEventListener('click', async () => {
+    sampleButton.disabled = true;
+    importStatus.classList.remove('le-import-error');
+    try {
+      await api.ready;
+      const assertEmpty = () => {
+        const state = api.state;
+        const overview = api.invokeTool('get_document_overview', {}, { actor: 'human' });
+        if (state.base.length || state.approved.length || state.pending.length || state.imports.length
+          || api.claims.length || overview.hypothesis !== '(not set — use set_hypothesis)') {
+          throw new Error('sample requires an empty workspace so synthetic records cannot be mixed into your work. Export any work you want to keep before resetting; nothing was changed.');
+        }
+      };
+      assertEmpty();
+      const response = await fetch('docs/examples/synthetic-evidence.csv');
+      if (!response.ok) throw new Error('sample unavailable; use the CSV download link');
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      assertEmpty(); // A user or agent could have added evidence while fetching.
+      stageBytes(bytes, 'synthetic-evidence.csv', 'text/csv');
+      importStatus.textContent = `SYNTHETIC DEMO ONLY. ${importStatus.textContent}`;
+    } catch (error) {
+      importStatus.classList.add('le-import-error');
+      importStatus.textContent = `Nothing imported: ${error.message}`;
+    } finally { sampleButton.disabled = false; }
   });
 </script>
 </body>

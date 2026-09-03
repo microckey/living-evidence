@@ -3,13 +3,11 @@
 // surface WebMCP execute() wraps — plus the human-only approval UI and the human
 // tool console (actor attribution is part of the contract now).
 // Server: python3 -m http.server 8501 --bind 127.0.0.1 (started by this script).
-import { createRequire } from 'module';
+import { chromium } from 'playwright';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
-const require = createRequire(import.meta.url);
-const { chromium } = require('/Users/hirokisugimoto/tennis-checker/node_modules/playwright');
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = 8501;

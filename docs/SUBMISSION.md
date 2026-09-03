@@ -1,7 +1,9 @@
 # WebMCP Challenge submission draft
 
-Status: final technical audit passed on 2026-09-04. Only the Devpost account/team
-state and the final Submit action remain user-visible gates.
+Status: the user reports the entry is submitted. Improvements are being prepared
+before the extended deadline: 2026-09-04 01:00 PDT / 17:00 JST. Keep the existing
+submission submitted while saving edits; do not withdraw or create a duplicate.
+Official notice: https://webmcp.devpost.com/updates/46227-deadline-extension-12-more-hours
 
 ## Project
 
@@ -45,6 +47,10 @@ Living Evidence is an implemented document-format prototype plus four surfaces:
   conversation-ingestion appendix**, not evidence for the scientific result.
 - A frozen PDF-vs-WebMCP protocol makes the performance hypothesis measurable.
   No runs are recorded yet, so the page makes no superiority claim.
+- A 30-second quick start makes the headline rule and provenance gaps immediately
+  usable. Human clicks and tool-client calls are visibly distinguished. An empty
+  workspace can stage three synthetic learning records behind individual human
+  approvals, without mixing them with existing research.
 
 The exemplar reproduces a historical Pygmalion synthesis with **19 effect-size
 records representing 18 experiments**. It openly reports that two records share
@@ -62,6 +68,13 @@ Web Crypto P-256. The Sites app is a thin route adapter over the same static
 documents. Unit and real-browser suites cover all four surfaces, human approval,
 reload persistence, hostile imports, cryptographic receipts, exact-byte export,
 HTTP and `file://` boot, and zero-network self-containment.
+
+A separate native Chrome 152 harness discovers all four WebMCP surfaces, checks
+their exposed schemas, invokes each overview and checks that a native headline
+rule updates the badge and agent ledger. Invalid input is rejected without ledger
+mutation. It uses the DevTools WebMCP domain, not a mock or the in-page handler.
+This is an integration test, not an autonomous-reasoning benchmark. ChatGPT's
+in-app agent remains untested.
 
 Selected numeric outputs reproduce checked R `metafor` fixture values. That
 tests this implementation's arithmetic for one dataset; it does not validate the

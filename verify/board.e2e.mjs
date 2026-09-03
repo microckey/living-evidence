@@ -34,15 +34,13 @@
 // Server: python3 -m http.server 8501 --bind 127.0.0.1 (started by this
 // script; readiness is polled, not assumed after a fixed delay). Playwright
 // comes from the absolute path below — no install.
-import { createRequire } from 'module';
+import { chromium } from 'playwright';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { computeTally, computeBoardDiagnostics, SEED_VERIFICATION_LABEL, TALLY_SCOPE } from '../lib/board.js';
 import { SEED } from '../data/housewife-board-seed.js';
 
-const require = createRequire(import.meta.url);
-const { chromium } = require('/Users/hirokisugimoto/tennis-checker/node_modules/playwright');
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = 8501;
