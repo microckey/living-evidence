@@ -17,6 +17,30 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show ✗ challenged badge on the textbook claim in every demo.
 
+## Status (2026-09-03 23:3x JST — Sites release candidate)
+
+- The user selected ChatGPT Sites as an additional production host for the
+  already-live GitHub Pages build. The original dependency-free HTML, CSS,
+  JavaScript, URLs and WebMCP contracts remain the source of truth.
+- Added a thin Vinext/Sites delivery adapter: the five HTML documents are bundled
+  into Cloudflare Worker route handlers, while `lib/`, `data/` and `docs/` remain
+  ordinary static assets. This preserves top-level WebMCP registration (no iframe)
+  and gives Sites the required Worker-compatible ESM output.
+- Added a generated social card (`public/og.png`) and request-origin-derived Open
+  Graph/X metadata. The origin comes from the platform request URL rather than a
+  forwarded host header, so the same archive emits correct absolute image URLs on
+  local preview and the eventual Sites production origin.
+- Validation for this release candidate: Vinext production build green; all six
+  project suites green (stats, rules, exemplar E2E, workspace E2E, Atlas E2E,
+  Board E2E); production-worker smoke checks returned 200 for all five documents,
+  the social image, shared libraries and data modules.
+- Project-specific memo (first observation): when an existing repo keeps a
+  root-level `index.html`, Vite dev mode can intercept it before an App Router
+  handler and transform its module scripts. For the production adapter, copy the
+  documents to non-HTML build inputs and import those as raw text; keep browser
+  modules in the static asset directory. This avoids both iframe isolation and
+  Vite HTML-entry rewriting.
+
 ## Status (2026-09-03 20:5x JST DEPLOYED — CURRENT; ~8h to deadline)
 
 - Codex could not deploy: usage limit exhausted until Sep 7 (after deadline),
@@ -342,6 +366,11 @@ NOT DONE (needs user or daytime):
 7. Close on the ledger: "every question left a trace on the document itself".
 
 ## Decisions
+
+- 2026-09-03: Sites deployment preserves the static runtime via a thin delivery
+  adapter; no React rewrite and no iframe. Social metadata is injected by the
+  Worker from the trusted request origin so the OG image URL is absolute without
+  hard-coding an unknown pre-deployment hostname.
 
 - 2026-08-29: `execute` returns plain objects (WebMCP runtime serializes to JSON)
   — per W3C draft + ChatGPT docs example. Do NOT pre-stringify.

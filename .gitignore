@@ -1,3 +1,10 @@
 _probe.html
 node_modules/
 .DS_Store
+.next/
+.sites-source/
+.vinext/
+dist/
+.wrangler/
+public/*
+!public/og.png

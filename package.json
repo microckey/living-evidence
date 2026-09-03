@@ -4,12 +4,37 @@
   "description": "A document format your AI can cross-examine — WebMCP-native living meta-analyses",
   "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
+    "dev": "node scripts/sync-static.mjs && vinext dev",
+    "build": "node scripts/sync-static.mjs && vinext build",
+    "start": "wrangler dev --config dist/server/wrangler.json",
     "test": "node verify/stats.test.mjs && node verify/rules.test.mjs",
     "serve": "python3 -m http.server 8501 --bind 127.0.0.1",
     "e2e": "node verify/e2e.mjs",
     "e2e:workspace": "node verify/workspace.e2e.mjs",
     "e2e:atlas": "node verify/atlas.e2e.mjs",
     "e2e:board": "node verify/board.e2e.mjs"
+  },
+  "dependencies": {
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-server-dom-webpack": "19.2.6",
+    "vinext": "1.0.0-beta.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@cloudflare/workers-types": "4.20260515.1",
+    "@openai/sites-vite-plugin": "0.2.0",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.26",
+    "typescript": "5.9.3",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0"
   }
 }
