@@ -53,6 +53,12 @@ Say "cross-examine", show the registered-rule-failed badge on the textbook claim
   from all four suites. README documents installation and Chromium download.
 - Unit, exemplar, workspace, Atlas, Board, onboarding and native Chrome suites
   pass. Desktop/mobile quick-start screenshots were visually inspected.
+- The production Worker also passed the native harness on all four surfaces.
+  Known local-development caveat: `pnpm dev` still hits Vite's root index.html
+  transformation and can emit html-proxy import errors despite HTTP 200. The
+  actual production adapter/build does not: use `pnpm build && pnpm start`
+  for a faithful local preview (or the native harness's static server). Do not
+  report the Vite development preview as validated merely from its 200 status.
 - English submission story and field-specific updates are prepared under the
   parent workspace's deliverables directory. AI disclosure includes the
   Claude-assisted work recorded in this log. Existing YouTube video is unchanged.
