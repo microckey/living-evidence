@@ -18,6 +18,38 @@ Creativity & Ambition. Positioning: NOT "executable papers again" — executable
 papers served human hands; this serves the machine reader (+ human approval gates).
 Say "cross-examine", show the registered-rule-failed badge on the textbook claim.
 
+## Status (2026-09-04 12:0x JST — extended-deadline improvements PUBLIC)
+
+- The user explicitly approved public Sites publication and the GitHub update.
+  The validated candidate `c94a46a55f5c69a58c5b2409439eea516cdf8e14` was pushed
+  to both source repositories. Sites version 4 deployed successfully with the
+  existing public access at https://living-evidence.doralemon.chatgpt.site/ .
+  GitHub Pages completed its deployment for the same commit. GitHub remains
+  public with a detected MIT license. This later audit change is documentation
+  only; the deployed application source remains the candidate above.
+- Re-ran the native harness against the PUBLIC Sites deployment using Chrome
+  152.0.7977.77: all 15/18/10/11 tools exposed schemas; each overview completed;
+  the headline-rule call updated the real badge, agent ledger and quick-start
+  panel; invalid input did not mutate the ledger. Anonymous requests also found
+  the new quick-start on GitHub Pages and synthetic sample on Sites Workspace.
+- The newly installed Devpost plugin successfully accessed project 1404875,
+  `living-evidence`, owned by the user. Updated its existing story in place
+  (version 5), then read back the new quick-start/native-harness passages and
+  scientific caveats. Native get_project returns normalized plain text, not
+  the original Markdown bytes; no byte-identical Markdown claim is made.
+- Saved and reopened the judge-facing testing instructions and tested-client
+  disclosure through the existing authenticated edit form (submission 1158391).
+  Both values matched exactly. The form still showed SUBMITTED / 5 of 5 steps
+  done, and the original submitted_at timestamp was preserved. No duplicate,
+  withdrawal, terms acceptance or resubmission occurred. AI-tool disclosure,
+  video, links, gallery and user-owned eligibility answers were preserved.
+- The story review corrected HTML tables versus SVG plots and scoped SHA-256
+  audit-chain claims to the exemplar/workspace. Zero comparative benchmark
+  runs, 0/19 primary checks and ChatGPT's in-app agent untested remain explicit.
+- Devpost's live dates report submissions_open, cutoff 2026-09-04T08:00:00Z
+  (17:00 JST). Freeze all submitted artifacts at that cutoff. Existing YouTube
+  video predates the new quick-start/sample shortcuts and was not replaced.
+
 ## Status (2026-09-04 — extended-deadline improvements, local release candidate)
 
 - The user reports that the Devpost entry is already submitted. The official
@@ -166,6 +198,10 @@ Say "cross-examine", show the registered-rule-failed badge on the textbook claim
   `/atlas` and `/board`. This commit is the exact candidate for Sites deployment.
 
 ## Decisions
+
+- 2026-09-04: Post-submission improvements update the existing Devpost project
+  and judge fields in place. Do not use submit_project again for an already
+  submitted entry when an ordinary project edit propagates automatically.
 
 - 2026-09-04: Internationalization must not overwrite source-language evidence.
   `quote` is the original verbatim excerpt; `quote_translation` is explicitly
@@ -553,6 +589,10 @@ NOT DONE (needs user or daytime):
   127.0.0.1, GPU-pinned rasterizer flags.
 
 ## Open questions (for the user)
+
+- 2026-09-04 release: no remaining publication or submission-edit blocker. A new
+  video would need separate recording/upload; the existing video is retained.
+  Older launch questions below are historical unless explicitly reopened.
 
 - Deploy target: Cloudflare Pages vs Netlify (both sponsor-credited)? Custom domain?
 - Demo's propose_study: keep clearly-labeled hypothetical replication, or dig up
